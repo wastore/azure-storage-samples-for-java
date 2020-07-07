@@ -9,9 +9,8 @@ import com.azure.security.keyvault.keys.cryptography.models.EncryptionAlgorithm;
 import com.azure.security.keyvault.keys.models.CreateRsaKeyOptions;
 import com.azure.security.keyvault.keys.models.KeyVaultKey;
 import com.azure.storage.blob.*;
-import com.azure.storage.blob.specialized.AppendBlobClient;
 import com.azure.storage.blob.specialized.BlockBlobClient;
-import com.azure.storage.blob.specialized.PageBlobClient;
+import com.azure.storage.common.StorageSharedKeyCredential;
 
 import java.io.*;
 import java.time.OffsetDateTime;
@@ -21,87 +20,9 @@ public class KeyVaultClientEncryption {
 
     public KeyVaultClientEncryption(){}
 
-    private void uploadAsBlockBlob(DecryptResult decryptionResult, BlobClient blobClientDecrypted){
-        // Get BlockBlobClient from BlobClient
-        BlockBlobClient decryptedBlockBlobClient = blobClientDecrypted.getBlockBlobClient();
-
-        // Upload decrypted blob
-        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(decryptionResult.getPlainText())){
-            decryptedBlockBlobClient.upload(inputStream, decryptionResult.getPlainText().length);
-        }
-        catch (IOException ex){
-            ex.printStackTrace();
-        }
-    }
-
-    private void uploadAsAppendBlob(DecryptResult decryptionResult, BlobClient blobClientDecrypted){
-        // Get AppendBlobClient from BlobClient
-        AppendBlobClient decryptedBlobClient = blobClientDecrypted.getAppendBlobClient();
-        decryptedBlobClient.create();
-        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(decryptionResult.getPlainText())){
-            decryptedBlobClient.appendBlock(inputStream, decryptionResult.getPlainText().length);
-        }
-        catch (IOException ex){
-            ex.printStackTrace();
-        }
-    }
-
-    private void uploadAsPageBlob(DecryptResult decryptionResult, BlobClient blobClientDecrypted){
-        // Get AppendBlobClient from BlobClient
-        PageBlobClient decryptedBlobClient = blobClientDecrypted.getPageBlobClient();
-//        decryptedBlobClient.create();
-        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(decryptionResult.getPlainText())){
-//            decryptedBlobClient.appendBlock(inputStream, decryptionResult.getPlainText().length);
-        }
-        catch (IOException ex){
-            ex.printStackTrace();
-        }
-    }
-
-    public void testing(String storageAccountUrl, String sasToken, String containerName, String blobName,
-                        String blobSuffix){
-        BlobClient blobClient = new BlobClientBuilder()
-                .endpoint(storageAccountUrl)
-                .sasToken(sasToken)
-                .containerName(containerName)
-                .blobName("test" + blobSuffix)
-                .buildClient();
-        ByteArrayOutputStream stream = null;
-        try(ByteArrayOutputStream outputStream = new ByteArrayOutputStream()){
-            blobClient.download(outputStream);
-            stream = outputStream;
-        }
-        catch (IOException exception){
-            exception.printStackTrace();
-        }
-
-        System.out.println(blobClient.getProperties().getBlobType());
-        PageBlobClient appendBlobClient = new BlobClientBuilder()
-                .endpoint(storageAccountUrl)
-                .sasToken(sasToken)
-                .containerName(containerName)
-                .blobName("testappendblob3" + blobSuffix)
-                .buildClient()
-                .getPageBlobClient();
-
-        appendBlobClient.create(512);
-        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(stream.toByteArray())){
-//            appendBlobClient.uploadPages(inputStream);
-        }
-        catch (IOException ex){
-            ex.printStackTrace();
-        }
-        BlobClient blobClient2 = new BlobClientBuilder()
-                .endpoint(storageAccountUrl)
-                .sasToken(sasToken)
-                .containerName(containerName)
-                .blobName("testappendblob3" + blobSuffix)
-                .buildClient();
-        blobClient2.downloadToFile(".\\src\\main\\java\\checking.txt");
-
-    }
     private void makeEncryptionScope(String keyVaultUrl, String keyName, String encryptionScope,
                                      String storageAccount, String resourceGroup, String subscription){
+
         // Creating key client that allows access of key vault
         KeyClient keyClient = new KeyClientBuilder()
                 .vaultUrl(keyVaultUrl)
@@ -131,14 +52,16 @@ public class KeyVaultClientEncryption {
             }
             if (line == null) { break; }
 //            System.out.println(line);
-        }
+    }
 
     }
 
     /**
      * Creates example container and blob, then uploads with client-side encryption with key vault
      **/
-    public void setup(String storageAccountUrl, String sasToken, String keyVaultUrl){
+    public void setup(String storageAccount, String sharedKeyCred, String keyVaultUrl){
+        String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
+
         // Setting names of container, blob, and key that will be created later in the code. Note that container
         // names are all lowercase and both containers and blobs cannot have underscores
         String exampleContainerName = "containername";
@@ -147,10 +70,10 @@ public class KeyVaultClientEncryption {
         String exampleKeyName = "keyname";
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
-        // account URL and generated SAS token
+        // account URL and shared key credential
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                 .endpoint(storageAccountUrl)
-                .sasToken(sasToken)
+                .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
                 .buildClient();
 
         // Creating client referencing to-be-created container, and then creating it
@@ -196,21 +119,20 @@ public class KeyVaultClientEncryption {
      * Downloads client-side encrypted blob, decrypts with key vault, then reuploads with server-side encryption that
      * either uses Microsoft or customer-managed keys
      **/
-    public void decryptReupload(String storageAccountUrl, String sasToken, String keyVaultUrl, String containerName,
+    public void decryptReupload(String storageAccount, String sharedKeyCred, String keyVaultUrl, String containerName,
                                 String blobName, String blobSuffix, String keyName, String encryptionScope){
+        String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
+
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
-        // account URL and generated SAS token
+        // account URL and shared key credential
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                 .endpoint(storageAccountUrl)
-                .sasToken(sasToken)
+                .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
                 .buildClient();
         // Creating BlobContainerClient to access container that has encrypted blob
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
         // Creating BlobClient that allows us to perform blob operations
         BlobClient blobClient = blobContainerClient.getBlobClient(blobName + blobSuffix);
-
-        // Checking blob type
-        String blobType = blobClient.getProperties().getBlobType().toString();
 
         // Creating key client that allows access of key vault
         KeyClient keyClient = new KeyClientBuilder()
@@ -240,7 +162,7 @@ public class KeyVaultClientEncryption {
         // Create blob client for reuploading
         BlobClientBuilder blobClientBuilder = new BlobClientBuilder()
                 .endpoint(storageAccountUrl)
-                .sasToken(sasToken)
+                .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
                 .containerName(containerName)
                 .blobName(blobName + "Decrypted" + blobSuffix);
 
@@ -268,11 +190,11 @@ public class KeyVaultClientEncryption {
 
 
     /**
-     * Requires setting and naming the following environmental variables:
+     * Requires setting and naming the following environmental variables (must be in system environmental variables):
      * CLIENT_ID
      * CLIENT_SECRET
      * TENANT_ID
-     * sasToken (for storage account)
+     * sharedKeyCred (shared key credential for accessing storage account)
      * keyVaultUrl (obtained through creating service principal)
      * storageAccount
      * resourceGroup
@@ -287,7 +209,7 @@ public class KeyVaultClientEncryption {
         // vault url obtained through creating service principal, as well as storage account, resource group, and
         // subscription names and that service principal has access to key vault.
 
-        String sasToken = System.getenv("sasToken");
+        String sharedKeyCred = System.getenv("sharedKeyCred");
         String keyVaultUrl = System.getenv("keyVaultUrl");
         String storageAccount = System.getenv("storageAccount");
         String resourceGroup = System.getenv("resourceGroup");
@@ -296,7 +218,6 @@ public class KeyVaultClientEncryption {
 
         // Setting names of container, blob, and key so that they match ones from setup. Can be changed in case where
         // set up is not used
-        String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
         String containerName = "containername";
         String blobName = "blobExample";
         String blobSuffix = ".txt";
@@ -306,16 +227,16 @@ public class KeyVaultClientEncryption {
         // Creating KeyVaultClientEncryption helper
         KeyVaultClientEncryption helper = new KeyVaultClientEncryption();
         // Setup where sample blob is client-side encrypted and uploaded to server
-        helper.setup(storageAccountUrl, sasToken, keyVaultUrl);
+        helper.setup(storageAccount, sharedKeyCred, keyVaultUrl);
 
         // Decrypts sample blob then reuploads with server-side encryption using Microsoft-managed keys
-        helper.decryptReupload(storageAccountUrl, sasToken, keyVaultUrl, containerName, blobName, blobSuffix, keyName, null);
+        helper.decryptReupload(storageAccount, sharedKeyCred, keyVaultUrl, containerName, blobName, blobSuffix, keyName, null);
 
         // Create an example encryption scope that will allow for server-side encryption using customer-managed keys
         helper.makeEncryptionScope(keyVaultUrl, keyName, encryptionScope, storageAccount, resourceGroup, subscription);
         // Decrypts sample blob then reuploads with server-side encryption using customer-managed keys using
         // encryption scope
-        helper.decryptReupload(storageAccountUrl, sasToken, keyVaultUrl, containerName, blobName, blobSuffix, keyName, encryptionScope);
+        helper.decryptReupload(storageAccount, sharedKeyCred, keyVaultUrl, containerName, blobName, blobSuffix, keyName, encryptionScope);
 
     }
 }
