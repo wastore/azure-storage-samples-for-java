@@ -1,6 +1,6 @@
-##Additional Setup for Client-side to CPK-N Code Samples
+## Additional Setup for Client-side to CPK-N Code Samples
 
-####KeyVaultClientEncryption 
+#### KeyVaultClientEncryption 
 This sample will show client-side decryption using a key from key vault, and then upload two files with server-side
 encryption. One will be encrypted with Microsoft-managed keys, and the other by customer-managed keys with
 key vault through the creation of an encryption scope. \
@@ -18,7 +18,7 @@ environmental variables exactly as listed below (must be in **system** environme
   
 
              
-####LocalKeyClientEncryption
+#### LocalKeyClientEncryption
 Requires setting and naming the following environmental variables exactly as listed below (must be in 
 **system** environmental variables):
  * sharedKeyCred (for storage account)
