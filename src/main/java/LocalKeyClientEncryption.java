@@ -3,7 +3,12 @@ import com.azure.security.keyvault.keys.cryptography.LocalKeyEncryptionKeyClient
 import com.azure.security.keyvault.keys.cryptography.models.KeyWrapAlgorithm;
 import com.azure.security.keyvault.keys.models.JsonWebKey;
 import com.azure.security.keyvault.keys.models.KeyOperation;
-import com.azure.storage.blob.*;
+
+import com.azure.storage.blob.BlobClient;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobClientBuilder;
+import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.CustomerProvidedKey;
 import com.azure.storage.blob.specialized.cryptography.EncryptedBlobClient;
 import com.azure.storage.blob.specialized.cryptography.EncryptedBlobClientBuilder;
@@ -68,7 +73,7 @@ public class LocalKeyClientEncryption {
         String exampleBlobSuffix = ".txt";
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
-        // account URL and generated SAS token
+        // account URL and shared key credential
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
                 .endpoint(storageAccountUrl)
                 .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
@@ -141,7 +146,7 @@ public class LocalKeyClientEncryption {
 
     /**
      * Requires setting and naming the following environmental variables (must be in system environmental variables):
-     * sasToken (for storage account)
+     * sharedKeyCred (for storage account)
      * storageAccount
      * This sample will show client-side decryption using a local key, and then upload two files with server-side
      * encryption. One will be encrypted with Microsoft-managed keys, and the other is by customer-provided keys.
