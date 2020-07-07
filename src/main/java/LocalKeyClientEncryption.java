@@ -21,15 +21,13 @@ import java.util.Random;
 
 
 public class LocalKeyClientEncryption {
-    public EncryptedBlobClient encryptedBlobClient;
-    public AsyncKeyEncryptionKey key;
 
     public LocalKeyClientEncryption(){}
 
     /**
      * Creates an example random but not secure customer provided key to be used in server-side encryption
      */
-    private CustomerProvidedKey createCPK(){
+    private static CustomerProvidedKey createCPK(){
         byte[] b = new byte[32];
         new Random().nextBytes(b);
         CustomerProvidedKey serverKey = new CustomerProvidedKey(b);
@@ -39,7 +37,7 @@ public class LocalKeyClientEncryption {
     /**
      * Creates a random, not secure local key to be used in client-side encryption
      */
-    private AsyncKeyEncryptionKey createLocalKey(){
+    private static AsyncKeyEncryptionKey createLocalKey(){
         byte[] byteKey = new byte[32];
         new Random().nextBytes(byteKey);
         JsonWebKey localKey = JsonWebKey.fromAes(new SecretKeySpec(byteKey, "AES"),
@@ -47,15 +45,14 @@ public class LocalKeyClientEncryption {
                 .setId("my-id");
         AsyncKeyEncryptionKey akek = new LocalKeyEncryptionKeyClientBuilder()
                 .buildAsyncKeyEncryptionKey(localKey).block();
-        this.key = akek;
         return akek;
     }
 
     /**
      * Sets local key client with in helper object to be used in decrpytion
      */
-    private void setLocalKeyClient(AsyncKeyEncryptionKey key, BlobClient blobClient){
-        this.encryptedBlobClient = new EncryptedBlobClientBuilder()
+    private static EncryptedBlobClient createLocalKeyClient(AsyncKeyEncryptionKey key, BlobClient blobClient){
+        return new EncryptedBlobClientBuilder()
                 .key(key, KeyWrapAlgorithm.A256KW.toString())
                 .blobClient(blobClient)
                 .buildEncryptedBlobClient();
@@ -64,13 +61,9 @@ public class LocalKeyClientEncryption {
     /**
      * Creates example container and blob, then uploads with client-side encryption with local keys
      */
-    public void setup(String storageAccount, String sharedKeyCred){
+    public static BlobClient setup(String storageAccount, String sharedKeyCred, String containerName, String blobName,
+                                   String blobSuffix, AsyncKeyEncryptionKey key){
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
-        // Setting names of container and blob that will be created later in the code. Note that container
-        // names are all lowercase and both containers and blobs cannot have underscores
-        String exampleContainerName = "containername";
-        String exampleBlobName = "blobExample";
-        String exampleBlobSuffix = ".txt";
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
         // account URL and shared key credential
@@ -80,44 +73,34 @@ public class LocalKeyClientEncryption {
                 .buildClient();
 
         // Creating client referencing to-be-created container, and then creating it
-        BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(exampleContainerName);
+        BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
         blobContainerClient.create();
 
         // Creating a blob client
-        BlobClient blobClient = blobContainerClient.getBlobClient(exampleBlobName + exampleBlobSuffix);
-        // Creating a local key and setting encryptedKeyClient
-        this.createLocalKey();
-        this.setLocalKeyClient(this.key, blobClient);
+        BlobClient blobClient = blobContainerClient.getBlobClient(blobName + blobSuffix);
+
+        // Setting encryptedKeyClient
+        EncryptedBlobClient encryptedBlobClient = createLocalKeyClient(key, blobClient);
 
         // Uploading example blob with client-side encryption
-        String fileName = exampleBlobName + exampleBlobSuffix;
-        this.encryptedBlobClient.uploadFromFile(".\\src\\main\\java\\" + fileName);
+        String fileName = blobName + blobSuffix;
+        encryptedBlobClient.uploadFromFile(".\\src\\main\\java\\" + fileName);
+        return blobClient;
     }
 
     /**
      * Downloads client-side encrypted blob, decrypts with local key, then reuploads with server-side encryption
      */
-    public void decryptReupload(String storageAccount, String sharedKeyCred, String containerName, String blobName,
+    public static void decryptReupload(BlobClient blobClient, String storageAccount, String sharedKeyCred, String containerName, String blobName,
                                 String blobSuffix, AsyncKeyEncryptionKey key, CustomerProvidedKey serverKey){
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
-        // Creating blob client to download blob
-        BlobClient blobClient = new BlobClientBuilder()
-                .endpoint(storageAccountUrl)
-                .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
-                .containerName(containerName)
-                .blobName(blobName + blobSuffix)
-                .buildClient();
-
         // Set blob encryption client
-        if (key == null) {
-            key = this.key;
-        }
-        this.setLocalKeyClient(key, blobClient);
+        EncryptedBlobClient encryptedBlobClient = createLocalKeyClient(key, blobClient);
 
         // Downloading encrypted blob, blob is decrypted upon download
         String fileName = blobName + "Decrypted" + blobSuffix;
-        this.encryptedBlobClient.downloadToFile(".\\src\\main\\java\\" + fileName);
+        encryptedBlobClient.downloadToFile(".\\src\\main\\java\\" + fileName);
 
         // Creating blob client for decryption and reuploading
         BlobClientBuilder blobClientBuilder = new BlobClientBuilder()
@@ -145,36 +128,31 @@ public class LocalKeyClientEncryption {
     }
 
     /**
-     * Requires setting and naming the following environmental variables (must be in system environmental variables):
-     * sharedKeyCred (for storage account)
-     * storageAccount
      * This sample will show client-side decryption using a local key, and then upload two files with server-side
-     * encryption. One will be encrypted with Microsoft-managed keys, and the other is by customer-provided keys.
+     * encryption. One will be encrypted with Microsoft-managed keys, and the other by customer-provided keys.
      */
     public static void main(String[] args){
         String sharedKeyCred = System.getenv("sharedKeyCred");
         String storageAccount = System.getenv("storageAccount");
 
-        // Setting names of container and blob so that they match ones from setup. Can be changed in case where
-        // set up is not used
-
+        // Setting names of container and blob that will be created later in the code. Note that container
+        // names are all lowercase and both containers and blobs cannot have underscores
         String containerName = "containername";
         String blobName = "blobExample";
         String blobSuffix = ".txt";
 
-        // Creating LocalKeyClientEncryption helper
-        LocalKeyClientEncryption helper = new LocalKeyClientEncryption();
-        // Setup where sample blob is client-side encrypted and uploaded to server
-        helper.setup(storageAccount, sharedKeyCred);
+        AsyncKeyEncryptionKey key = createLocalKey();
 
-        // Add additional AsyncKeyEncryptionKey in decryption if example key was not used
+        // Setup where sample blob is client-side encrypted and uploaded to server
+        BlobClient blobClientEncrypted = setup(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, key);
+
         // Decrypts sample blob then reuploads with server-side encryption using Microsoft-managed keys
-        helper.decryptReupload(storageAccount, sharedKeyCred, containerName,
-                blobName, blobSuffix, null, null);
+        decryptReupload(blobClientEncrypted, storageAccount, sharedKeyCred, containerName,
+                blobName, blobSuffix, key, null);
 
         // Decrypts sample blob then reuploads with server-side encryption using customer-managed keys
-        helper.decryptReupload(storageAccount, sharedKeyCred, containerName,
-                blobName, blobSuffix, null, helper.createCPK());
+        decryptReupload(blobClientEncrypted, storageAccount, sharedKeyCred, containerName,
+                blobName, blobSuffix, key, createCPK());
 
     }
 }
