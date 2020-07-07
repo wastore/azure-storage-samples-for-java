@@ -21,10 +21,10 @@ Requires setting and naming the following environmental variables exactly as lis
   * *subscription* (of resource group)
              
 #### LocalKeyClientEncryption
+This sample will show client-side decryption using a local key, and then upload two files with server-side
+encryption. One will be encrypted with Microsoft-managed keys, and the other by customer-provided keys. \
 Requires setting and naming the following environmental variables exactly as listed below (must be in 
 **system** environmental variables):
  * *sharedKeyCred* (for storage account)
  * *storageAccount*
  
-This sample will show client-side decryption using a local key, and then upload two files with server-side
-encryption. One will be encrypted with Microsoft-managed keys, and the other by customer-provided keys.
