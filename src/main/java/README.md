@@ -1,7 +1,7 @@
 ## Additional Setup for Client-side to CPK-N Code Samples
 
 #### General Setup
-Requires installation of Java (at least JDK 11) and Maven. Must have an Azure subscription and create a storage account.
+Requires installation of Java (at least JDK 8) and Maven. Must have an Azure subscription and create a storage account.
 
 #### KeyVaultClientEncryption 
 This sample will show client-side decryption using a key from key vault, and then upload two files with server-side
@@ -11,9 +11,9 @@ In addition to the general setup, create a service principal with access to key 
 find client id, client secret (password), and tenant id. \
 Requires setting and naming the following environmental variables exactly as listed below 
 (must be in **system** environmental variables):
-  * *CLIENT_ID*
-  * *CLIENT_SECRET*
-  * *TENANT_ID*
+  * *AZURE_CLIENT_ID*
+  * *AZURE_CLIENT_SECRET*
+  * *AZURE_TENANT_ID*
   * *sharedKeyCred* (shared key credential for accessing storage account)
   * *keyVaultUrl* (obtained through creating service principal)
   * *storageAccount*
