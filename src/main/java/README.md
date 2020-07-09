@@ -1,7 +1,8 @@
 ## Additional Setup for Client-side to CPK-N Code Samples
 
 #### General Setup
-Requires installation of Java (at least JDK 8) and Maven. Must have an Azure subscription and create a storage account.
+Requires installation of Java (at least JDK 8), Maven, and Azure CLI. Must have an Azure subscription and 
+create a storage account.
 
 #### KeyVaultClientEncryption 
 This sample will show client-side decryption using a key from key vault, and then upload two files with server-side
