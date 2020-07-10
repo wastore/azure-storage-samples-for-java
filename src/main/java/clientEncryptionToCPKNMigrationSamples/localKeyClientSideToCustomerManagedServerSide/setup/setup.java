@@ -44,6 +44,9 @@ public class setup {
         return akek;
     }
 
+    /**
+     * Creating encryption scope that allows access to key from key vault
+     */
     private static void createEncryptionScope(String keyVaultUrl, String keyName, String encryptionScope,
                                               String storageAccount, String resourceGroup, String subscription) {
         // Creating key client that allows access of key vault
@@ -70,19 +73,16 @@ public class setup {
         }
         // Reading outputs from command line
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-        String line = null;
-        while (true) {
-            try {
-                line = r.readLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (line == null) {
-                break;
-            }
+        try {
+            while ((r.readLine()) != null) {}
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
+    /**
+     * Encrypts sample blob using local key provided and uploads to server
+     */
     public static void setup(String storageAccount, String sharedKeyCred, String containerName, String blobName,
                                             String blobSuffix, AsyncKeyEncryptionKey key) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
@@ -140,7 +140,7 @@ public class setup {
         String containerName = "containername";
         String blobName = "blobExample";
         String blobSuffix = ".txt";
-        // Name for a key in key vault that will be generated and name for encryption scope to access key
+        // Name for a key in key vault that will be generated and name for encryption scope to access a key
         String keyName = "keyName";
         String encryptionScope = "encryptionScopeName";
 
@@ -156,7 +156,8 @@ public class setup {
             System.out.println("Exception in saving key: " + e);
         }
 
-        // Create an example encryption scope that will allow for server-side encryption using customer-managed keys
+        // Create an example encryption scope to access given key that will allow for server-side encryption using
+        // customer-managed keys
         createEncryptionScope(keyVaultUrl, keyName, encryptionScope, storageAccount, resourceGroup, subscription);
 
         // Setup where sample blob is client-side encrypted and uploaded to server

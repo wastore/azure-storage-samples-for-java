@@ -85,16 +85,10 @@ public class KeyVaultClientEncryption {
         }
         // Reading outputs from command line
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-        String line = null;
-        while (true) {
-            try {
-                line = r.readLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (line == null) {
-                break;
-            }
+        try {
+            while ((r.readLine()) != null) {}
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -198,7 +192,6 @@ public class KeyVaultClientEncryption {
         String storageAccount = System.getenv("storageAccount");
         String resourceGroup = System.getenv("resourceGroup");
         String subscription = System.getenv("subscription");
-
 
         // Setting names of container, blob, and key that will be created later in the code. Note that container
         // names are all lowercase and both containers and blobs cannot have underscores

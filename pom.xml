@@ -26,8 +26,13 @@
     <dependencies>
         <dependency>
             <groupId>com.azure</groupId>
-            <artifactId>azure-storage-blob-cryptography</artifactId>
+            <artifactId>azure-storage-blob</artifactId>
             <version>12.8.0-beta.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-storage-blob-cryptography</artifactId>
+            <version>12.8.0-beta.2</version>
         </dependency>
         <dependency>
             <groupId>com.azure</groupId>

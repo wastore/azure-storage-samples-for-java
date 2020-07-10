@@ -97,6 +97,7 @@ public class decrypt {
         String pathToDir = ".\\src\\main\\java\\clientEncryptionToCPKNMigrationSamples\\" +
                 "localKeyClientSideToCustomerProvidedServerSide\\setup\\";
 
+        // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
             Properties prop = new Properties();
             prop.load(input);

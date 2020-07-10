@@ -77,7 +77,6 @@ public class decrypt {
                 .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
                 .containerName(containerName)
                 .blobName(fileName);
-
         BlobClient blobClientDecrypted = blobClientBuilder.buildClient();
 
         // Uploading file to server
@@ -95,6 +94,7 @@ public class decrypt {
         String pathToDir = ".\\src\\main\\java\\clientEncryptionToCPKNMigrationSamples\\" +
                 "localKeyClientSideToMicrosoftManagedServerSide\\setup\\";
 
+        // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
             Properties prop = new Properties();
             prop.load(input);
@@ -109,10 +109,8 @@ public class decrypt {
         String blobName = "blobExample";
         String blobSuffix = ".txt";
 
-        // File containing key
+        // Extracting key from file containing key
         String file = pathToDir + "byteKeyInsecure.txt";
-
-        // Extracting key from file
         AsyncKeyEncryptionKey key = createLocalKey(extractLocalKey(file));
         // Decrypts sample blob then reuploads with server-side encryption using Microsoft-managed keys
         decryptReupload(storageAccount, sharedKeyCred, containerName,

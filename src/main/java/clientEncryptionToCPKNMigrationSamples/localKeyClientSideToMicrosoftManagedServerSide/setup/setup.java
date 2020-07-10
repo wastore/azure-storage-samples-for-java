@@ -36,6 +36,9 @@ public class setup {
         return akek;
     }
 
+    /**
+     * Encrypts sample blob using local key provided and uploads to server
+     */
     public static void setup(String storageAccount, String sharedKeyCred, String containerName, String blobName,
                              String blobSuffix, AsyncKeyEncryptionKey key) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
@@ -88,7 +91,7 @@ public class setup {
         String blobName = "blobExample";
         String blobSuffix = ".txt";
 
-        // Creating random local key and storing bytes into local file for later use in decrypting
+        // Creating random local key and storing bytes insecurely into local file for later use in decrypting
         byte[] b = new byte[32];
         new Random().nextBytes(b);
         AsyncKeyEncryptionKey key = createLocalKey(b);
