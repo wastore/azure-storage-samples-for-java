@@ -5,7 +5,7 @@ will be downloaded, decrypted, then reuploaded into the same container with serv
 using customer-provided keys. 
 
 #### General Setup
-Requires installation of Java (at least JDK 8), Azure CLI, and Maven. Must have an Azure subscription and 
+Requires installation of Java (at least JDK 8) and Maven. Must have an Azure subscription and 
 create a storage account.
 
 #### Code Sample Specific Setup
