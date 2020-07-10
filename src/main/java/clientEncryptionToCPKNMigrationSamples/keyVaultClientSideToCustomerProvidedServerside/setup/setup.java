@@ -75,7 +75,8 @@ public class setup {
                 .buildEncryptedBlobClient();
 
         // Uploading example blob with client-side encryption
-        encryptedBlobClient.uploadFromFile(".\\src\\main\\java\\" + fileName);
+        encryptedBlobClient.uploadFromFile(".\\src\\main\\java\\clientEncryptionToCPKNMigrationSamples\\" +
+                "keyVaultClientSideToCustomerProvidedServerside\\setup\\" + fileName);
     }
 
     public static void main(String[] args) {

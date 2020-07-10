@@ -4,8 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>azure-storage-samples-for-java</groupId>
-    <artifactId>azure-storage-samples-for-java</artifactId>
-    <packaging>pom</packaging>
+    <artifactId>changeFeedSamples</artifactId>
     <version>1.0-beta.1</version>
     <build>
         <plugins>
@@ -20,9 +19,6 @@
             </plugin>
         </plugins>
     </build>
-    <modules>
-        <module>testing</module>
-    </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -30,23 +26,13 @@
     <dependencies>
         <dependency>
             <groupId>com.azure</groupId>
+            <artifactId>azure-storage-blob-changefeed</artifactId>
+            <version>12.0.0-beta.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.azure</groupId>
             <artifactId>azure-storage-blob</artifactId>
             <version>12.8.0-beta.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.azure</groupId>
-            <artifactId>azure-storage-blob-cryptography</artifactId>
-            <version>12.8.0-beta.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.azure</groupId>
-            <artifactId>azure-security-keyvault-keys</artifactId>
-            <version>4.2.0-beta.3</version>
-        </dependency>
-        <dependency>
-            <groupId>com.azure</groupId>
-            <artifactId>azure-identity</artifactId>
-            <version>1.0.8</version>
         </dependency>
     </dependencies>
     

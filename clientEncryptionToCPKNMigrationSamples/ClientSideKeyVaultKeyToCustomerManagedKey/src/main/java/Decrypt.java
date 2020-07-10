@@ -1,5 +1,3 @@
-package clientEncryptionToCPKNMigrationSamples.keyVaultClientSideToMicrosoftManagedServerSide.setup;
-
 import com.azure.core.credential.TokenCredential;
 import com.azure.core.cryptography.AsyncKeyEncryptionKey;
 import com.azure.identity.DefaultAzureCredentialBuilder;
@@ -7,23 +5,23 @@ import com.azure.security.keyvault.keys.KeyClient;
 import com.azure.security.keyvault.keys.KeyClientBuilder;
 import com.azure.security.keyvault.keys.cryptography.KeyEncryptionKeyClientBuilder;
 import com.azure.security.keyvault.keys.cryptography.models.KeyWrapAlgorithm;
-import com.azure.security.keyvault.keys.models.CreateRsaKeyOptions;
 import com.azure.security.keyvault.keys.models.KeyVaultKey;
 import com.azure.storage.blob.BlobClient;
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.BlobClientBuilder;
 import com.azure.storage.blob.specialized.cryptography.EncryptedBlobClient;
 import com.azure.storage.blob.specialized.cryptography.EncryptedBlobClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.OffsetDateTime;
 import java.util.Properties;
 
-public class setup {
+/**
+ * Downloads and decrypts blob using key vault, then reuploads using customer-managed keys through encryption scopes
+ */
+public class Decrypt {
     /**
      * Creates an Async key for client-side encryption
      */
@@ -36,47 +34,52 @@ public class setup {
     }
 
     /**
-     * Creates example container and blob, then uploads with client-side encryption with key vault
+     * Downloads client-side encrypted blob, decrypts with key vault, then reuploads with server-side encryption that
+     * either uses Microsoft or customer-managed keys
      **/
-    public static void setup(String storageAccount, String sharedKeyCred, String keyVaultUrl, String
-            containerName, String blobName, String blobSuffix, String keyName) {
+    public static void decryptReupload(String storageAccount, String sharedKeyCred, String containerName,
+                                       String blobName, String blobSuffix, String keyVaultUrl, String keyname,
+                                       String encryptionScope) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
-        String fileName = blobName + blobSuffix;
+        String path = "clientEncryptionToCPKNMigrationSamples\\keyVaultClientSideToCustomerManagedServerSide\\src\\main\\java\\setup\\";
 
-        // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
-        // account URL and shared key credential
-        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
+        // Setting encryptedKeyClient with key vault key
+        BlobClient blobClient = new BlobClientBuilder()
                 .endpoint(storageAccountUrl)
                 .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
+                .containerName(containerName)
+                .blobName(blobName + blobSuffix)
                 .buildClient();
-
-        // Creating client referencing to-be-created container, and then creating it
-        BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
-        blobContainerClient.create();
-
-        // Creating key client that allows access of key vault
         TokenCredential cred = new DefaultAzureCredentialBuilder().build();
         KeyClient keyClient = new KeyClientBuilder()
                 .vaultUrl(keyVaultUrl)
                 .credential(cred)
                 .buildClient();
-        // Creating an example RSA key in key vault
-        KeyVaultKey rsaKey = keyClient.createRsaKey(new CreateRsaKeyOptions(keyName)
-                .setExpiresOn(OffsetDateTime.now().plusYears(1))
-                .setKeySize(2048));
-
-        // Creating a blob client
-        BlobClient blobClient = blobContainerClient.getBlobClient(blobName + blobSuffix);
-
-        // Setting encryptedKeyClient with key vault key
+        KeyVaultKey rsaKey = keyClient.getKey(keyname);
         EncryptedBlobClient encryptedBlobClient = new EncryptedBlobClientBuilder()
                 .key(createAsyncKey(rsaKey, cred), KeyWrapAlgorithm.RSA_OAEP.toString())
                 .blobClient(blobClient)
                 .buildEncryptedBlobClient();
 
-        // Uploading example blob with client-side encryption
-        encryptedBlobClient.uploadFromFile(".\\src\\main\\java\\clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToMicrosoftManagedServerSide\\setup\\" + fileName);
+        // Downloading encrypted blob, blob is decrypted upon download
+        String fileName = blobName + "Decrypted" + blobSuffix;
+        encryptedBlobClient.downloadToFile(path + fileName);
+
+        // Creating blob client for reuploading
+        BlobClientBuilder blobClientBuilder = new BlobClientBuilder()
+                .endpoint(storageAccountUrl)
+                .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
+                .containerName(containerName)
+                .encryptionScope(encryptionScope)
+                .blobName(fileName);
+        BlobClient blobClientDecrypted = blobClientBuilder.buildClient();
+
+        // Uploading file to server
+        blobClientDecrypted.uploadFromFile(path + fileName);
+
+        // Cleaning up by deleting local save of encrypted blob
+        File localFile = new File(path + fileName);
+        localFile.delete();
     }
 
     public static void main(String[] args) {
@@ -84,8 +87,8 @@ public class setup {
         String sharedKeyCred = null;
         String keyVaultUrl = null;
 
-        String pathToDir = ".\\src\\main\\java\\clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToMicrosoftManagedServerSide\\setup\\";
+        String pathToDir = "clientEncryptionToCPKNMigrationSamples\\keyVaultClientSideToCustomerManagedServerSide\\" +
+                "src\\main\\java\\setup\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
@@ -98,15 +101,15 @@ public class setup {
             ex.printStackTrace();
         }
 
-        // Setting names of container and blob that will be created later in the code. Note that container
-        // names are all lowercase and both containers and blobs cannot have underscores
+        // Setting names of container and blob that were created in setup
         String containerName = "containername";
         String blobName = "blobExample";
         String blobSuffix = ".txt";
-        // Name for a key in key vault that will be generated
+        // Name for a key in key vault used for client-side encryption and name for an encryption scope
         String keyName = "keyName";
+        String encryptionScope = "encryptionScopeName";
 
-        // Setup where sample blob is client-side encrypted and uploaded to server
-        setup(storageAccount, sharedKeyCred, keyVaultUrl, containerName, blobName, blobSuffix, keyName);
+        // Decrypts sample blob then reuploads with server-side encryption using customer-managed keys
+        decryptReupload(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, keyVaultUrl, keyName, encryptionScope);
     }
 }

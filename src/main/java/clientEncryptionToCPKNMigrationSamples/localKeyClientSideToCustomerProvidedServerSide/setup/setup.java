@@ -65,7 +65,8 @@ public class setup {
 
         // Uploading example blob with client-side encryption
         String fileName = blobName + blobSuffix;
-        encryptedBlobClient.uploadFromFile(".\\src\\main\\java\\" + fileName);
+        encryptedBlobClient.uploadFromFile(".\\src\\main\\java\\clientEncryptionToCPKNMigrationSamples\\" +
+                "localKeyClientSideToCustomerProvidedServerSide\\setup\\" + fileName);
     }
 
     public static void main(String[] args) {

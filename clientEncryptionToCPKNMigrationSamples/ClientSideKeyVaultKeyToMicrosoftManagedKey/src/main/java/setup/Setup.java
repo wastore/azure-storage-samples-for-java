@@ -1,4 +1,4 @@
-package clientEncryptionToCPKNMigrationSamples.keyVaultClientSideToMicrosoftManagedServerSide.setup;
+package setup;
 
 import com.azure.core.credential.TokenCredential;
 import com.azure.core.cryptography.AsyncKeyEncryptionKey;
@@ -23,7 +23,10 @@ import java.io.InputStream;
 import java.time.OffsetDateTime;
 import java.util.Properties;
 
-public class setup {
+/**
+ * Set up by creating client-side encrypted blob in a new container using key vault
+ */
+public class Setup {
     /**
      * Creates an Async key for client-side encryption
      */
@@ -66,17 +69,18 @@ public class setup {
                 .setKeySize(2048));
 
         // Creating a blob client
-        BlobClient blobClient = blobContainerClient.getBlobClient(blobName + blobSuffix);
+        BlobClient blobClient = blobContainerClient.getBlobClient(fileName);
 
         // Setting encryptedKeyClient with key vault key
+        AsyncKeyEncryptionKey key = createAsyncKey(rsaKey, cred);
         EncryptedBlobClient encryptedBlobClient = new EncryptedBlobClientBuilder()
-                .key(createAsyncKey(rsaKey, cred), KeyWrapAlgorithm.RSA_OAEP.toString())
+                .key(key, KeyWrapAlgorithm.RSA_OAEP.toString())
                 .blobClient(blobClient)
                 .buildEncryptedBlobClient();
 
         // Uploading example blob with client-side encryption
-        encryptedBlobClient.uploadFromFile(".\\src\\main\\java\\clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToMicrosoftManagedServerSide\\setup\\" + fileName);
+        encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
+                "keyVaultClientSideToMicrosoftManagedServerSide\\src\\main\\java\\setup\\" + fileName);
     }
 
     public static void main(String[] args) {
@@ -84,8 +88,8 @@ public class setup {
         String sharedKeyCred = null;
         String keyVaultUrl = null;
 
-        String pathToDir = ".\\src\\main\\java\\clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToMicrosoftManagedServerSide\\setup\\";
+        String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
+                "keyVaultClientSideToMicrosoftManagedServerSide\\src\\main\\java\\setup\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {

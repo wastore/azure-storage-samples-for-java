@@ -1,4 +1,4 @@
-package clientEncryptionToCPKNMigrationSamples.localKeyClientSideToCustomerManagedServerSide.setup;
+package setup;
 
 import com.azure.core.cryptography.AsyncKeyEncryptionKey;
 import com.azure.identity.DefaultAzureCredentialBuilder;
@@ -31,7 +31,11 @@ import java.util.Arrays;
 import java.util.Properties;
 import java.util.Random;
 
-public class setup {
+/**
+ * Set up by creating client-side encrypted blob in a new container using an example local key. Saves local key in local
+ * file for decrpytion. Creates key vault key and generates encryption scope for reupload during decrpytion
+ */
+public class Setup {
     /**
      * Creates a random, not secure local key to be used in client-side encryption
      */
@@ -86,6 +90,7 @@ public class setup {
     public static void setup(String storageAccount, String sharedKeyCred, String containerName, String blobName,
                                             String blobSuffix, AsyncKeyEncryptionKey key) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
+        String fileName = blobName + blobSuffix;
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
         // account URL and shared key credential
@@ -99,7 +104,7 @@ public class setup {
         blobContainerClient.create();
 
         // Creating a blob client
-        BlobClient blobClient = blobContainerClient.getBlobClient(blobName + blobSuffix);
+        BlobClient blobClient = blobContainerClient.getBlobClient(fileName);
 
         // Setting encryptedKeyClient
         EncryptedBlobClient encryptedBlobClient = new EncryptedBlobClientBuilder()
@@ -108,9 +113,8 @@ public class setup {
                 .buildEncryptedBlobClient();
 
         // Uploading example blob with client-side encryption
-        String fileName = blobName + blobSuffix;
-        encryptedBlobClient.uploadFromFile(".\\src\\main\\java\\clientEncryptionToCPKNMigrationSamples\\" +
-                "localKeyClientSideToCustomerManagedServerSide\\setup\\" + fileName);
+        encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
+                "localKeyClientSideToCustomerManagedServerSide\\src\\main\\java\\setup\\" + fileName);
     }
 
     public static void main(String[] args) {
@@ -120,8 +124,8 @@ public class setup {
         String resourceGroup = null;
         String subscription = null;
 
-        String pathToDir = ".\\src\\main\\java\\clientEncryptionToCPKNMigrationSamples\\" +
-                "localKeyClientSideToCustomerManagedServerSide\\setup\\";
+        String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
+                "localKeyClientSideToCustomerManagedServerSide\\src\\main\\java\\setup\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
