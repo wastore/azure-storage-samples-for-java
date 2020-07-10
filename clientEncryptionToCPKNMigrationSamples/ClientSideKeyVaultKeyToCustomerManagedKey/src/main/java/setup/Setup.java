@@ -116,7 +116,7 @@ public class Setup {
 
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToCustomerManagedServerSide\\src\\main\\java\\setup\\" + fileName);
+                "ClientSideKeyVaultKeyToCustomerManagedKey\\src\\main\\java\\setup\\" + fileName);
     }
 
     public static void main(String[] args) {
@@ -126,7 +126,7 @@ public class Setup {
         String resourceGroup = null;
         String subscription = null;
 
-        String pathToDir = "clientEncryptionToCPKNMigrationSamples\\keyVaultClientSideToCustomerManagedServerSide\\" +
+        String pathToDir = "clientEncryptionToCPKNMigrationSamples\\ClientSideKeyVaultKeyToCustomerManagedKey\\" +
                 "src\\main\\java\\setup\\";
 
         // Extracting variables from config file

@@ -70,7 +70,7 @@ public class Setup {
 
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "localKeyClientSideToCustomerProvidedServerSide\\src\\main\\java\\setup\\" + fileName);
+                "ClientSideLocalKeyToCustomerProvidedKey\\src\\main\\java\\setup\\" + fileName);
     }
 
     public static void main(String[] args) {
@@ -78,7 +78,7 @@ public class Setup {
         String sharedKeyCred = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "localKeyClientSideToCustomerProvidedServerSide\\src\\main\\java\\setup\\";
+                "ClientSideLocalKeyToCustomerProvidedKey\\src\\main\\java\\setup\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {

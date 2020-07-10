@@ -45,7 +45,7 @@ public class Decrypt {
                                        CustomerProvidedKey localKey) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
         String path = "clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToCustomerProvidedServerSide\\src\\main\\java\\setup\\";
+                "ClientSideKeyVaultKeyToCustomerProvidedKey\\src\\main\\java\\setup\\";
 
         // Setting encryptedKeyClient with key vault key
         BlobClient blobClient = new BlobClientBuilder()
@@ -92,7 +92,7 @@ public class Decrypt {
         String keyVaultUrl = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToCustomerProvidedServerSide\\src\\main\\java\\setup\\";
+                "ClientSideKeyVaultKeyToCustomerProvidedKey\\src\\main\\java\\setup\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {

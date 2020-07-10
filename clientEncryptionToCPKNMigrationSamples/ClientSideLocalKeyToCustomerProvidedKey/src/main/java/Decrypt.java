@@ -58,7 +58,7 @@ public class Decrypt {
                                        String blobSuffix, AsyncKeyEncryptionKey key, CustomerProvidedKey serverKey) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
         String path = "clientEncryptionToCPKNMigrationSamples\\" +
-                "localKeyClientSideToCustomerProvidedServerSide\\src\\main\\java\\setup\\";
+                "ClientSideLocalKeyToCustomerProvidedKey\\src\\main\\java\\setup\\";
 
         // Creating encrypted blob client to download blob
         BlobClient blobClient = new BlobClientBuilder()
@@ -99,7 +99,7 @@ public class Decrypt {
         String sharedKeyCred = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "localKeyClientSideToCustomerProvidedServerSide\\src\\main\\java\\setup\\";
+                "ClientSideLocalKeyToCustomerProvidedKey\\src\\main\\java\\setup\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {

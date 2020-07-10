@@ -70,7 +70,7 @@ public class Setup {
 
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "localKeyClientSideToMicrosoftManagedServerSide\\src\\main\\java\\setup\\"
+                "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\"
                 + fileName);
     }
 
@@ -79,7 +79,7 @@ public class Setup {
         String sharedKeyCred = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "localKeyClientSideToMicrosoftManagedServerSide\\src\\main\\java\\setup\\";
+                "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {

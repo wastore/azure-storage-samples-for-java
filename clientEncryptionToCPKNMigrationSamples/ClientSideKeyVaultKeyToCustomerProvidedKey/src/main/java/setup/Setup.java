@@ -80,7 +80,7 @@ public class Setup {
 
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToCustomerProvidedServerSide\\src\\main\\java\\setup\\" + fileName);
+                "ClientSideKeyVaultKeyToCustomerProvidedKey\\src\\main\\java\\setup\\" + fileName);
     }
 
     public static void main(String[] args) {
@@ -89,7 +89,7 @@ public class Setup {
         String keyVaultUrl = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToCustomerProvidedServerSide\\src\\main\\java\\setup\\";
+                "ClientSideKeyVaultKeyToCustomerProvidedKey\\src\\main\\java\\setup\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
