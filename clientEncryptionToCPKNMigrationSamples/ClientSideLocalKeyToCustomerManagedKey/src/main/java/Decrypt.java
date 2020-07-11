@@ -51,14 +51,11 @@ public class Decrypt {
     }
 
     /**
-     * Downloads client-side encrypted blob, decrypts with local key, then reuploads with server-side encryption
+     * Downloads client-side encrypted blob, decrypts with a local key, then stores in local file temporarily
      */
-    public static void decryptReupload(String storageAccount, String sharedKeyCred, String containerName, String blobName,
-                                       String blobSuffix, AsyncKeyEncryptionKey key, String encryptionScope) {
+    private static void decryptClientSideLocalKey(String storageAccount, String sharedKeyCred, String containerName, String blobName,
+                                                  String blobSuffix, AsyncKeyEncryptionKey key, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
-        String path = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToCustomerManagedKey\\src\\main\\java\\setup\\";
-
         // Creating encrypted blob client to download blob
         BlobClient blobClient = new BlobClientBuilder()
                 .endpoint(storageAccountUrl)
@@ -74,7 +71,15 @@ public class Decrypt {
         // Downloading encrypted blob, blob is decrypted upon download
         String fileName = blobName + "Decrypted" + blobSuffix;
         encryptedBlobClient.downloadToFile(path + fileName);
+    }
 
+    /**
+     * Reuploads blob with server-side encryption using a customer-managed key
+     */
+    private static void encryptCustomerManaged(String storageAccount, String sharedKeyCred, String containerName, String blobName,
+                                               String blobSuffix, String encryptionScope, String path) {
+        String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
+        String fileName = blobName + "Decrypted" + blobSuffix;
         // Creating blob client for reuploading
         BlobClientBuilder blobClientBuilder = new BlobClientBuilder()
                 .endpoint(storageAccountUrl)
@@ -87,7 +92,13 @@ public class Decrypt {
 
         // Uploading file to server
         blobClientDecrypted.uploadFromFile(path + fileName);
+    }
 
+    /**
+     * Cleans up temp files created during decryption
+     */
+    private static void cleanup(String blobName, String blobSuffix, String path) {
+        String fileName = blobName + "Decrypted" + blobSuffix;
         // Cleaning up by deleting local save of encrypted blob
         File localFile = new File(path + fileName);
         localFile.delete();
@@ -123,7 +134,8 @@ public class Decrypt {
         byte[] b = extractLocalKey(file);
         AsyncKeyEncryptionKey key = createLocalKey(b);
         // Decrypts sample blob then reuploads with server-side encryption using customer-managed keys
-        decryptReupload(storageAccount, sharedKeyCred, containerName,
-                blobName, blobSuffix, key, encryptionScope);
+        decryptClientSideLocalKey(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, key, pathToDir);
+        encryptCustomerManaged(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, encryptionScope, pathToDir);
+        cleanup(blobName, blobSuffix, pathToDir);
     }
 }

@@ -34,14 +34,11 @@ public class Decrypt {
     }
 
     /**
-     * Downloads client-side encrypted blob, decrypts with key vault, then reuploads with server-side encryption that
-     * either uses Microsoft or customer-managed keys
-     **/
-    public static void decryptReupload(String storageAccount, String sharedKeyCred, String containerName,
-                                       String blobName, String blobSuffix, String keyVaultUrl, String keyname) {
+     * Downloads client-side encrypted blob, decrypts with key vault, then stores in local file temporarily
+     */
+    private static void decryptClientSideKeyVaultKey(String storageAccount, String sharedKeyCred, String containerName,
+                                                     String blobName, String blobSuffix, String keyVaultUrl, String keyname, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
-        String path = "clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToMicrosoftManagedServerSide\\src\\main\\java\\setup\\";
 
         // Setting encryptedKeyClient with key vault key
         BlobClient blobClient = new BlobClientBuilder()
@@ -64,6 +61,15 @@ public class Decrypt {
         // Downloading encrypted blob, blob is decrypted upon download
         String fileName = blobName + "Decrypted" + blobSuffix;
         encryptedBlobClient.downloadToFile(path + fileName);
+    }
+
+    /**
+     * Reuploads blob with server-side encryption using a Microsoft-managed key
+     */
+    private static void encryptMicrosoftManaged(String storageAccount, String sharedKeyCred, String containerName,
+                                                String blobName, String blobSuffix, String path) {
+        String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
+        String fileName = blobName + "Decrypted" + blobSuffix;
 
         // Creating blob client for reuploading
         BlobClientBuilder blobClientBuilder = new BlobClientBuilder()
@@ -75,7 +81,13 @@ public class Decrypt {
 
         // Uploading file to server
         blobClientDecrypted.uploadFromFile(path + fileName);
+    }
 
+    /**
+     * Cleans up temp files created during decryption
+     */
+    private static void cleanup(String blobName, String blobSuffix, String path) {
+        String fileName = blobName + "Decrypted" + blobSuffix;
         // Cleaning up by deleting local save of encrypted blob
         File localFile = new File(path + fileName);
         localFile.delete();
@@ -87,7 +99,7 @@ public class Decrypt {
         String keyVaultUrl = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "keyVaultClientSideToMicrosoftManagedServerSide\\src\\main\\java\\setup\\";
+                "ClientSideKeyVaultKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
@@ -109,6 +121,8 @@ public class Decrypt {
         String keyName = "keyName";
 
         // Decrypts sample blob then reuploads with server-side encryption using Microsoft-managed keys
-        decryptReupload(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, keyVaultUrl, keyName);
+        decryptClientSideKeyVaultKey(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, keyVaultUrl, keyName, pathToDir);
+        encryptMicrosoftManaged(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, pathToDir);
+        cleanup(blobName, blobSuffix, pathToDir);
     }
 }
