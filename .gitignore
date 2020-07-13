@@ -2,3 +2,4 @@
 target/
 **/byteKeyInsecure.txt
 *.iml
+changeFeedSamples/trackingChangesToBlobs/src/main/java/ChangeFeed.java

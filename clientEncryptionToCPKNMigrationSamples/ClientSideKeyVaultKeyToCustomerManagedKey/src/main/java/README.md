@@ -1,7 +1,7 @@
 ## Additional Setup for Client-Side Encryption with Key Vault to Server-Side Encryption with Customer-Managed Keys
-This sample will show how client-side encryption works with key vault keys and upload a blob into a newly 
-generated container in the provided storage account linked to an Azure subscription. Then, the uploaded blob 
-will be downloaded, decrypted, then reuploaded into the same container with server-side encryption
+This sample will show how client-side encryption works with key vault keys and upload an example blob (blobExample.txt 
+found in setup folder) into a newly generated container in the provided storage account linked to an Azure subscription.
+Then, the uploaded blob will be downloaded, decrypted, then reuploaded into the same container with server-side encryption
 using customer-managed keys. Both encryptions will use the same key from key vault. 
 
 #### General Setup
@@ -23,3 +23,10 @@ Requires modification of app.config file in setup folder. Must add values to var
  * *keyVaultUrl*
  * *resourceGroup*
  * *subscription*
+ 
+ Requires the following variables in same app.config file, should not be changed if using given setup.
+ * *containerName*
+ * *blobName*
+ * *blobSuffix*
+ * *keyName*
+ * *encryptionScope*

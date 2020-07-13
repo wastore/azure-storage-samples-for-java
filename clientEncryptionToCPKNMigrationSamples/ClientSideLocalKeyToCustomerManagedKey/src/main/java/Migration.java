@@ -23,7 +23,7 @@ import java.util.Properties;
  * Downloads and decrypts blob using local key found in local file, then reuploads using customer-managed keys
  * through encryption scopes
  */
-public class Decrypt {
+public class Migration {
     /**
      * Creates a random, not secure local key to be used in client-side encryption
      */
@@ -91,7 +91,7 @@ public class Decrypt {
         BlobClient blobClientDecrypted = blobClientBuilder.buildClient();
 
         // Uploading file to server
-        blobClientDecrypted.uploadFromFile(path + fileName);
+        blobClientDecrypted.uploadFromFile(path + fileName, true);
     }
 
     /**

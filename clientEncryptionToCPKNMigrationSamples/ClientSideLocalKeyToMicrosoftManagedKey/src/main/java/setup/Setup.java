@@ -57,7 +57,9 @@ public class Setup {
 
         // Creating client referencing to-be-created container, and then creating it
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
-        blobContainerClient.create();
+        if (!blobContainerClient.exists()) {
+            blobContainerClient.create();
+        }
 
         // Creating a blob client
         BlobClient blobClient = blobContainerClient.getBlobClient(fileName);
@@ -71,12 +73,15 @@ public class Setup {
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
                 "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\"
-                + fileName);
+                + fileName, true);
     }
 
     public static void main(String[] args) {
         String storageAccount = null;
         String sharedKeyCred = null;
+        String containerName = null;
+        String blobName = null;
+        String blobSuffix = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
                 "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\";
@@ -87,15 +92,12 @@ public class Setup {
             prop.load(input);
             storageAccount = prop.getProperty("storageAccount");
             sharedKeyCred = prop.getProperty("sharedKeyCred");
+            containerName = prop.getProperty("containerName");
+            blobName = prop.getProperty("blobName");
+            blobSuffix = prop.getProperty("blobSuffix");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-
-        // Setting names of container and blob that will be created later in the code. Note that container
-        // names are all lowercase and both containers and blobs cannot have underscores
-        String containerName = "containername";
-        String blobName = "blobExample";
-        String blobSuffix = ".txt";
 
         // Creating random local key and storing bytes insecurely into local file for later use in decrypting
         byte[] b = new byte[32];

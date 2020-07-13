@@ -8,7 +8,6 @@ import com.azure.security.keyvault.keys.cryptography.models.KeyWrapAlgorithm;
 import com.azure.security.keyvault.keys.models.KeyVaultKey;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobClientBuilder;
-import com.azure.storage.blob.models.CustomerProvidedKey;
 import com.azure.storage.blob.specialized.cryptography.EncryptedBlobClient;
 import com.azure.storage.blob.specialized.cryptography.EncryptedBlobClientBuilder;
 import com.azure.storage.common.StorageSharedKeyCredential;
@@ -18,13 +17,11 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
-import java.util.Random;
 
 /**
- * Downloads and decrypts blob using key vault, creates an example local key, and reuploads blob with customer-provided
- * key
+ * Downloads and decrypts blob using key vault, then reuploads using customer-managed keys through encryption scopes
  */
-public class Decrypt {
+public class Migration {
     /**
      * Creates an Async key for client-side encryption
      */
@@ -40,8 +37,8 @@ public class Decrypt {
      * Downloads client-side encrypted blob, decrypts with key vault, then stores in local file temporarily
      */
     private static void decryptClientSideKeyVaultKey(String storageAccount, String sharedKeyCred, String containerName,
-                                                     String blobName, String blobSuffix, String keyVaultUrl, String keyname,
-                                                     String path){
+                                                  String blobName, String blobSuffix, String keyVaultUrl, String keyname,
+                                                  String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
         // Setting encryptedKeyClient with key vault key
@@ -68,11 +65,11 @@ public class Decrypt {
     }
 
     /**
-     * Reuploads blob with server-side encryption using a customer-provided key
+     * Reuploads blob with server-side encryption using a customer-managed key
      */
-    private static void encryptCustomerProvided(String storageAccount, String sharedKeyCred, String containerName,
-                                                String blobName, String blobSuffix,
-                                                CustomerProvidedKey localKey, String path) {
+    private static void encryptCustomerManaged(String storageAccount, String sharedKeyCred, String containerName,
+                                               String blobName, String blobSuffix,
+                                               String encryptionScope, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
         String fileName = blobName + "Decrypted" + blobSuffix;
         // Creating blob client for reuploading
@@ -80,12 +77,12 @@ public class Decrypt {
                 .endpoint(storageAccountUrl)
                 .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
                 .containerName(containerName)
-                .customerProvidedKey(localKey)
+                .encryptionScope(encryptionScope)
                 .blobName(fileName);
         BlobClient blobClientDecrypted = blobClientBuilder.buildClient();
 
         // Uploading file to server
-        blobClientDecrypted.uploadFromFile(path + fileName);
+        blobClientDecrypted.uploadFromFile(path + fileName, true);
     }
 
     /**
@@ -103,8 +100,8 @@ public class Decrypt {
         String sharedKeyCred = null;
         String keyVaultUrl = null;
 
-        String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideKeyVaultKeyToCustomerProvidedKey\\src\\main\\java\\setup\\";
+        String pathToDir = "clientEncryptionToCPKNMigrationSamples\\ClientSideKeyVaultKeyToCustomerManagedKey\\" +
+                "src\\main\\java\\setup\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
@@ -117,21 +114,17 @@ public class Decrypt {
             ex.printStackTrace();
         }
 
-        // Setting names of container and blob that will be created later in the code. Note that container
-        // names are all lowercase and both containers and blobs cannot have underscores
+        // Setting names of container and blob that were created in setup
         String containerName = "containername";
         String blobName = "blobExample";
         String blobSuffix = ".txt";
-        // Name for a key in key vault used in client-side encryption
+        // Name for a key in key vault used for client-side encryption and name for an encryption scope
         String keyName = "keyName";
+        String encryptionScope = "encryptionScopeName";
 
-        // Creating local key for server-side encryption
-        byte[] b = new byte[32];
-        new Random().nextBytes(b);
-        // Decrypts sample blob then reuploads with server-side encryption using Microsoft-managed keys
-        decryptClientSideKeyVaultKey(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, keyVaultUrl,
-                keyName, pathToDir);
-        encryptCustomerProvided(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, new CustomerProvidedKey(b), pathToDir);
+        // Decrypts sample blob then reuploads with server-side encryption using customer-managed keys
+        decryptClientSideKeyVaultKey(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, keyVaultUrl, keyName, pathToDir);
+        encryptCustomerManaged(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, encryptionScope, pathToDir);
         cleanup(blobName, blobSuffix, pathToDir);
     }
 }

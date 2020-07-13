@@ -55,7 +55,9 @@ public class Setup {
 
         // Creating client referencing to-be-created container, and then creating it
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
-        blobContainerClient.create();
+        if (!blobContainerClient.exists()) {
+            blobContainerClient.create();
+        }
 
         // Creating key client that allows access of key vault
         TokenCredential cred = new DefaultAzureCredentialBuilder().build();
@@ -80,13 +82,17 @@ public class Setup {
 
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideKeyVaultKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\" + fileName);
+                "ClientSideKeyVaultKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\" + fileName, true);
     }
 
     public static void main(String[] args) {
         String storageAccount = null;
         String sharedKeyCred = null;
         String keyVaultUrl = null;
+        String containerName = null;
+        String blobName = null;
+        String blobSuffix = null;
+        String keyName = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
                 "ClientSideKeyVaultKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\";
@@ -98,17 +104,13 @@ public class Setup {
             storageAccount = prop.getProperty("storageAccount");
             sharedKeyCred = prop.getProperty("sharedKeyCred");
             keyVaultUrl = prop.getProperty("keyVaultUrl");
+            containerName = prop.getProperty("containerName");
+            blobName = prop.getProperty("blobName");
+            blobSuffix = prop.getProperty("blobSuffix");
+            keyName = prop.getProperty("keyName");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-
-        // Setting names of container and blob that will be created later in the code. Note that container
-        // names are all lowercase and both containers and blobs cannot have underscores
-        String containerName = "containername";
-        String blobName = "blobExample";
-        String blobSuffix = ".txt";
-        // Name for a key in key vault that will be generated
-        String keyName = "keyName";
 
         // Setup where sample blob is client-side encrypted and uploaded to server
         setup(storageAccount, sharedKeyCred, keyVaultUrl, containerName, blobName, blobSuffix, keyName);
