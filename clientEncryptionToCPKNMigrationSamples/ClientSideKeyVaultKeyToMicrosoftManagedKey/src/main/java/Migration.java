@@ -69,7 +69,7 @@ public class Migration {
     private static void encryptMicrosoftManaged(String storageAccount, String sharedKeyCred, String containerName,
                                                 String blobName, String blobSuffix, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
-        String fileName = blobName + "Decrypted" + blobSuffix;
+        String fileName = blobName + "MMK" + blobSuffix;
 
         // Creating blob client for reuploading
         BlobClientBuilder blobClientBuilder = new BlobClientBuilder()
@@ -87,7 +87,7 @@ public class Migration {
      * Cleans up temp files created during decryption
      */
     private static void cleanup(String blobName, String blobSuffix, String path) {
-        String fileName = blobName + "Decrypted" + blobSuffix;
+        String fileName = blobName + "MMK" + blobSuffix;
         // Cleaning up by deleting local save of encrypted blob
         File localFile = new File(path + fileName);
         localFile.delete();
