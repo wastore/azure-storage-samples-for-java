@@ -18,4 +18,4 @@ Requires modification of app.config file in setup folder. Must add values to var
 Requires the following variables in same app.config file, should not be changed if using given setup.
   * *containerName*
   * *blobName*
-  * *blobSuffix*
+  * *blobDecryptedName* (name for reuploaded blob)

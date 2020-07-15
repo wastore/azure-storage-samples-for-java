@@ -64,6 +64,10 @@ public class Setup {
                 .setExpiresOn(OffsetDateTime.now().plusYears(1))
                 .setKeySize(2048));
         String keyId = rsaKey.getId();
+
+        // Template for command:
+        // az storage account encryption-scope create --name <encryptionScopeName> -s Microsoft.KeyVault -u <keyID>
+        //      --account-name <storageAccountName> -g <resourceGroupName> --subscription <subscriptionName>
         String command = "az storage account encryption-scope create --name " + encryptionScope + " -s " +
                 "Microsoft.KeyVault -u " + keyId +
                 " --account-name " + storageAccount + " -g " + resourceGroup + " --subscription " + subscription;
@@ -88,9 +92,8 @@ public class Setup {
      * Encrypts sample blob using local key provided and uploads to server
      */
     public static void setup(String storageAccount, String sharedKeyCred, String containerName, String blobName,
-                                            String blobSuffix, AsyncKeyEncryptionKey key) {
+                                            AsyncKeyEncryptionKey key) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
-        String fileName = blobName + blobSuffix;
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
         // account URL and shared key credential
@@ -106,7 +109,7 @@ public class Setup {
         }
 
         // Creating a blob client
-        BlobClient blobClient = blobContainerClient.getBlobClient(fileName);
+        BlobClient blobClient = blobContainerClient.getBlobClient(blobName);
 
         // Setting encryptedKeyClient
         EncryptedBlobClient encryptedBlobClient = new EncryptedBlobClientBuilder()
@@ -116,7 +119,7 @@ public class Setup {
 
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToCustomerManagedKey\\src\\main\\java\\setup\\" + fileName, true);
+                "ClientSideLocalKeyToCustomerManagedKey\\src\\main\\java\\setup\\" + blobName, true);
     }
 
     public static void main(String[] args) {
@@ -127,7 +130,6 @@ public class Setup {
         String subscription = null;
         String containerName = null;
         String blobName = null;
-        String blobSuffix = null;
         String keyName = null;
         String encryptionScope = null;
 
@@ -145,7 +147,6 @@ public class Setup {
             subscription = prop.getProperty("subscription");
             containerName = prop.getProperty("containerName");
             blobName = prop.getProperty("blobName");
-            blobSuffix = prop.getProperty("blobSuffix");
             keyName = prop.getProperty("keyName");
             encryptionScope = prop.getProperty("encryptionScope");
         } catch (IOException ex) {
@@ -169,6 +170,6 @@ public class Setup {
         createEncryptionScope(keyVaultUrl, keyName, encryptionScope, storageAccount, resourceGroup, subscription);
 
         // Setup where sample blob is client-side encrypted and uploaded to server
-        setup(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, key);
+        setup(storageAccount, sharedKeyCred, containerName, blobName, key);
     }
 }

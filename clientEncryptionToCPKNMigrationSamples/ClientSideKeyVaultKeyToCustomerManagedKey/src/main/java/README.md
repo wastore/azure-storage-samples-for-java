@@ -12,7 +12,8 @@ and Maven. Must have an [Azure subscription](https://azure.microsoft.com/en-us/f
 
 #### Code Sample Specific Setup
 Must create a service principal and connect it to a key vault associated with Azure subscription. Set system
-environmental variables to contain the following variables whose values are found in service principal:
+environmental variables to contain the following variables whose values are found in service principal (does not have to 
+be in app.config):
  * *AZURE_CLIENT_ID*
  * *AZURE_CLIENT_SECRET*
  * *AZURE_TENANT_ID*
@@ -27,6 +28,6 @@ Requires modification of app.config file in setup folder. Must add values to var
  Requires the following variables in same app.config file, should not be changed if using given setup.
  * *containerName*
  * *blobName*
- * *blobSuffix*
+ * *blobDecryptedName* (name for reuploaded blob)
  * *keyName*
  * *encryptionScope*

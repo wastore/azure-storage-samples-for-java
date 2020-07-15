@@ -44,9 +44,8 @@ public class Setup {
      * Encrypts sample blob using local key provided and uploads to server
      */
     public static void setup(String storageAccount, String sharedKeyCred, String containerName, String blobName,
-                             String blobSuffix, AsyncKeyEncryptionKey key) {
+                             AsyncKeyEncryptionKey key) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
-        String fileName = blobName + blobSuffix;
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
         // account URL and shared key credential
@@ -62,7 +61,7 @@ public class Setup {
         }
 
         // Creating a blob client
-        BlobClient blobClient = blobContainerClient.getBlobClient(fileName);
+        BlobClient blobClient = blobContainerClient.getBlobClient(blobName);
 
         // Setting encryptedKeyClient
         EncryptedBlobClient encryptedBlobClient = new EncryptedBlobClientBuilder()
@@ -73,7 +72,7 @@ public class Setup {
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
                 "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\"
-                + fileName, true);
+                + blobName, true);
     }
 
     public static void main(String[] args) {
@@ -81,7 +80,6 @@ public class Setup {
         String sharedKeyCred = null;
         String containerName = null;
         String blobName = null;
-        String blobSuffix = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
                 "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\";
@@ -94,7 +92,6 @@ public class Setup {
             sharedKeyCred = prop.getProperty("sharedKeyCred");
             containerName = prop.getProperty("containerName");
             blobName = prop.getProperty("blobName");
-            blobSuffix = prop.getProperty("blobSuffix");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -112,6 +109,6 @@ public class Setup {
         }
 
         // Setup where sample blob is client-side encrypted and uploaded to server
-        setup(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, key);
+        setup(storageAccount, sharedKeyCred, containerName, blobName, key);
     }
 }

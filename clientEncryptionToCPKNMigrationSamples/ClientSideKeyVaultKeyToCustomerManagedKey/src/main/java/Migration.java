@@ -37,7 +37,7 @@ public class Migration {
      * Downloads client-side encrypted blob, decrypts with key vault, then stores in local file temporarily
      */
     private static void decryptClientSideKeyVaultKey(String storageAccount, String sharedKeyCred, String containerName,
-                                                  String blobName, String blobSuffix, String keyVaultUrl, String keyname,
+                                                  String blobName, String blobDecryptName, String keyVaultUrl, String keyname,
                                                   String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
@@ -46,7 +46,7 @@ public class Migration {
                 .endpoint(storageAccountUrl)
                 .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
                 .containerName(containerName)
-                .blobName(blobName + blobSuffix)
+                .blobName(blobName)
                 .buildClient();
         TokenCredential cred = new DefaultAzureCredentialBuilder().build();
         KeyClient keyClient = new KeyClientBuilder()
@@ -60,38 +60,35 @@ public class Migration {
                 .buildEncryptedBlobClient();
 
         // Downloading encrypted blob, blob is decrypted upon download
-        String fileName = blobName + "Decrypted" + blobSuffix;
-        encryptedBlobClient.downloadToFile(path + fileName);
+        encryptedBlobClient.downloadToFile(path + blobDecryptName);
     }
 
     /**
      * Reuploads blob with server-side encryption using a customer-managed key
      */
     private static void encryptCustomerManaged(String storageAccount, String sharedKeyCred, String containerName,
-                                               String blobName, String blobSuffix,
+                                               String blobDecryptName,
                                                String encryptionScope, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
-        String fileName = blobName + "CMK" + blobSuffix;
         // Creating blob client for reuploading
         BlobClientBuilder blobClientBuilder = new BlobClientBuilder()
                 .endpoint(storageAccountUrl)
                 .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
                 .containerName(containerName)
                 .encryptionScope(encryptionScope)
-                .blobName(fileName);
+                .blobName(blobDecryptName);
         BlobClient blobClientDecrypted = blobClientBuilder.buildClient();
 
         // Uploading file to server
-        blobClientDecrypted.uploadFromFile(path + fileName, true);
+        blobClientDecrypted.uploadFromFile(path + blobDecryptName, true);
     }
 
     /**
      * Cleans up temp files created during decryption
      */
-    private static void cleanup(String blobName, String blobSuffix, String path) {
-        String fileName = blobName + "CMK" + blobSuffix;
+    private static void cleanup(String blobDecryptName, String path) {
         // Cleaning up by deleting local save of encrypted blob
-        File localFile = new File(path + fileName);
+        File localFile = new File(path + blobDecryptName);
         localFile.delete();
     }
 
@@ -99,6 +96,11 @@ public class Migration {
         String storageAccount = null;
         String sharedKeyCred = null;
         String keyVaultUrl = null;
+        String containerName = null;
+        String blobName = null;
+        String blobDecryptName = null;
+        String keyName = null;
+        String encryptionScope = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\ClientSideKeyVaultKeyToCustomerManagedKey\\" +
                 "src\\main\\java\\setup\\";
@@ -110,21 +112,18 @@ public class Migration {
             storageAccount = prop.getProperty("storageAccount");
             sharedKeyCred = prop.getProperty("sharedKeyCred");
             keyVaultUrl = prop.getProperty("keyVaultUrl");
+            containerName = prop.getProperty("containerName");
+            blobName = prop.getProperty("blobName");
+            blobDecryptName = prop.getProperty("blobDecryptName");
+            keyName = prop.getProperty("keyName");
+            encryptionScope = prop.getProperty("encryptionScope");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
 
-        // Setting names of container and blob that were created in setup
-        String containerName = "containername";
-        String blobName = "blobExample";
-        String blobSuffix = ".txt";
-        // Name for a key in key vault used for client-side encryption and name for an encryption scope
-        String keyName = "keyName";
-        String encryptionScope = "encryptionScopeName";
-
         // Decrypts sample blob then reuploads with server-side encryption using customer-managed keys
-        decryptClientSideKeyVaultKey(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, keyVaultUrl, keyName, pathToDir);
-        encryptCustomerManaged(storageAccount, sharedKeyCred, containerName, blobName, blobSuffix, encryptionScope, pathToDir);
-        cleanup(blobName, blobSuffix, pathToDir);
+        decryptClientSideKeyVaultKey(storageAccount, sharedKeyCred, containerName, blobName, blobDecryptName, keyVaultUrl, keyName, pathToDir);
+        encryptCustomerManaged(storageAccount, sharedKeyCred, containerName, blobDecryptName, encryptionScope, pathToDir);
+        cleanup(blobDecryptName, pathToDir);
     }
 }

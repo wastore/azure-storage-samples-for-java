@@ -42,9 +42,8 @@ public class Setup {
      * Creates example container and blob, then uploads with client-side encryption with key vault
      **/
     public static void setup(String storageAccount, String sharedKeyCred, String keyVaultUrl, String
-            containerName, String blobName, String blobSuffix, String keyName) {
+            containerName, String blobName, String keyName) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
-        String fileName = blobName + blobSuffix;
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
         // account URL and shared key credential
@@ -71,7 +70,7 @@ public class Setup {
                 .setKeySize(2048));
 
         // Creating a blob client
-        BlobClient blobClient = blobContainerClient.getBlobClient(fileName);
+        BlobClient blobClient = blobContainerClient.getBlobClient(blobName);
 
         // Setting encryptedKeyClient with key vault key
         AsyncKeyEncryptionKey key = createAsyncKey(rsaKey, cred);
@@ -82,7 +81,7 @@ public class Setup {
 
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideKeyVaultKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\" + fileName, true);
+                "ClientSideKeyVaultKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\" + blobName, true);
     }
 
     public static void main(String[] args) {
@@ -91,7 +90,6 @@ public class Setup {
         String keyVaultUrl = null;
         String containerName = null;
         String blobName = null;
-        String blobSuffix = null;
         String keyName = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
@@ -106,13 +104,12 @@ public class Setup {
             keyVaultUrl = prop.getProperty("keyVaultUrl");
             containerName = prop.getProperty("containerName");
             blobName = prop.getProperty("blobName");
-            blobSuffix = prop.getProperty("blobSuffix");
             keyName = prop.getProperty("keyName");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
 
         // Setup where sample blob is client-side encrypted and uploaded to server
-        setup(storageAccount, sharedKeyCred, keyVaultUrl, containerName, blobName, blobSuffix, keyName);
+        setup(storageAccount, sharedKeyCred, keyVaultUrl, containerName, blobName, keyName);
     }
 }
