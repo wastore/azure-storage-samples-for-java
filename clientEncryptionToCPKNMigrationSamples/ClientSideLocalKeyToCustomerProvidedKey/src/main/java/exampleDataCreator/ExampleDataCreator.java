@@ -1,4 +1,4 @@
-package exampleCreation;
+package exampleDataCreator;
 
 import com.azure.core.cryptography.AsyncKeyEncryptionKey;
 import com.azure.security.keyvault.keys.cryptography.LocalKeyEncryptionKeyClientBuilder;
@@ -24,10 +24,10 @@ import java.util.Random;
 
 /**
  * Set up by creating client-side encrypted blob in a new container using an example local key. Saves local key in local
- * file for decryption. Running the ExampleCreation is optional as long as if customer has a client-side encrypted blob
+ * file for decryption. Running the ExampleDataCreator is optional as long as if customer has a client-side encrypted blob
  * ready to be migrated and local key created for reupload
  */
-public class ExampleCreation {
+public class ExampleDataCreator {
     /**
      * Creates a random, not secure local key to be used in client-side encryption
      */

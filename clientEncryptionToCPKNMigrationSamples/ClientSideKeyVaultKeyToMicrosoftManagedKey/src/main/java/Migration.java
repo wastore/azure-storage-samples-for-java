@@ -137,7 +137,8 @@ public class Migration {
         decryptClientSideKeyVaultKey(clientSecret, tenantId, clientId,
                 storageAccount, sharedKeyCred, containerName, blobName, blobNameAfterMigration,
                 keyVaultUrl, clientSideEncryptionKeyName, keyWrapAlgorithm, pathToDir);
-        encryptMicrosoftManaged(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration, encryptionScope, pathToDir);
+        encryptMicrosoftManaged(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration,
+                encryptionScope, pathToDir);
         cleanup(blobNameAfterMigration, pathToDir);
     }
 }

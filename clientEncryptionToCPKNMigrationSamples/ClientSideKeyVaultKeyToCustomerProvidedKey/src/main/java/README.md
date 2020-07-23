@@ -1,6 +1,6 @@
 ## Additional Setup for Client-Side Encryption with Key Vault to Server-Side Encryption with Customer-Provided Keys
 This sample will show how client-side encryption works with key vault keys and upload an example blob (blobExample.txt 
-found in exampleCreation folder) into a newly generated container in the provided storage account linked to an Azure subscription.
+found in exampleDataCreator folder) into a newly generated container in the provided storage account linked to an Azure subscription.
 Then, the uploaded blob will be downloaded, decrypted, then reuploaded into the same container with server-side encryption
 using customer-provided keys. 
 
@@ -17,12 +17,12 @@ to contain the following variables whose values are found in service principal:
  * *clientSecret*
  * *tenantId*
 
-Requires modification of app.config file in exampleCreation folder. Must add values to variables listed below:
+Requires modification of app.config file in exampleDataCreator folder. Must add values to variables listed below:
  * *sharedKeyCred* (for storage account)
  * *storageAccount*
  * *keyVaultUrl*
  
-  Requires the following variables in same app.config file, should not be changed if using given exampleCreation.
+  Requires the following variables in same app.config file, should not be changed if using given exampleDataCreator.
   * *localKeyFileName* (stores byte array that represents local key)
   * *containerName*
   * *blobName*
@@ -32,6 +32,6 @@ Requires modification of app.config file in exampleCreation folder. Must add val
 
 #### How to use files
 First, ensure to follow setup as described above and that the app.config file is filled out completely. Variables that
-have already been filled out are left as is if ExampleCreation.java will be run. Running the ExampleCreation is optional as 
+have already been filled out are left as is if ExampleDataCreator.java will be run. Running the ExampleDataCreator is optional as 
 long as if customer has a client-side encrypted blob ready to be migrated and a local key prepared for reupload. 
-After ExampleCreation is run, run Migration to perform migration to server-side encryption. 
+After ExampleDataCreator is run, run Migration to perform migration to server-side encryption. 

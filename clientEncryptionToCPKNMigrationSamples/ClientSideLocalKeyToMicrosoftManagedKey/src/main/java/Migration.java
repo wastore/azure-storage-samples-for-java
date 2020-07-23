@@ -52,8 +52,8 @@ public class Migration {
     /**
      * Downloads client-side encrypted blob, decrypts with local key, then stores in local file temporarily
      */
-    private static void decryptClientSideLocalKey(String storageAccount, String sharedKeyCred, String containerName, String blobName,
-                                                  String blobDecryptName, AsyncKeyEncryptionKey key,
+    private static void decryptClientSideLocalKey(String storageAccount, String sharedKeyCred, String containerName,
+                                                  String blobName, String blobDecryptName, AsyncKeyEncryptionKey key,
                                                   String keyWrapAlgorithm, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
@@ -140,7 +140,8 @@ public class Migration {
         // Decrypts sample blob then reuploads with server-side encryption using Microsoft-managed keys
         decryptClientSideLocalKey(storageAccount, sharedKeyCred, containerName, blobName, blobNameAfterMigration, key,
                 keyWrapAlgorithm, pathToDir);
-        encryptMicrosoftManaged(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration, encryptionScope, pathToDir);
+        encryptMicrosoftManaged(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration, encryptionScope,
+                pathToDir);
         cleanup(blobNameAfterMigration, pathToDir);
 
     }
