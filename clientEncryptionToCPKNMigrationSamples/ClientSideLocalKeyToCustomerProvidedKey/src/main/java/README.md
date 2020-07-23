@@ -25,5 +25,5 @@ Requires the following variables in same app.config file, should not be changed 
 #### How to use files
 First, ensure to follow setup as described above and that the app.config file is filled out completely. Variables that
 have already been filled out are left as is if ExampleDataCreator.java will be run. Running the ExampleDataCreator is optional as 
-long as if customer has a client-side encrypted blob ready to be migrated and a local key prepared for reupload. After
+long as the customer has a client-side encrypted blob ready to be migrated and a local key prepared for reupload. After
  ExampleDataCreator is run, run Migration to perform migration to server-side encryption. 

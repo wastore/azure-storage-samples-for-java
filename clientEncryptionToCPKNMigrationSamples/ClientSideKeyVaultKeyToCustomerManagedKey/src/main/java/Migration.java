@@ -70,9 +70,9 @@ public class Migration {
     /**
      * Reuploads blob with server-side encryption using a customer-managed key
      */
-    private static void encryptCustomerManaged(String storageAccount, String sharedKeyCred, String containerName,
-                                               String blobDecryptName,
-                                               String encryptionScope, String path) {
+    private static void encryptCustomerManagedKey(String storageAccount, String sharedKeyCred, String containerName,
+                                                  String blobDecryptName,
+                                                  String encryptionScope, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
         // Creating blob client for reuploading
         BlobClientBuilder blobClientBuilder = new BlobClientBuilder()
@@ -136,7 +136,7 @@ public class Migration {
         // Decrypts sample blob then reuploads with server-side encryption using customer-managed keys
         decryptClientSideKeyVaultKey(clientSecret, tenantId, clientId,
                 storageAccount, sharedKeyCred, containerName, blobName, blobNameAfterMigration, keyVaultUrl, clientSideEncryptionKeyName, keyWrapAlgorithm, pathToDir);
-        encryptCustomerManaged(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration, encryptionScope, pathToDir);
+        encryptCustomerManagedKey(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration, encryptionScope, pathToDir);
         cleanup(blobNameAfterMigration, pathToDir);
     }
 }
