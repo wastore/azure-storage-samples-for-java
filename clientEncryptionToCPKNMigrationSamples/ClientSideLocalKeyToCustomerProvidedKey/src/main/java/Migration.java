@@ -1,6 +1,5 @@
 import com.azure.core.cryptography.AsyncKeyEncryptionKey;
 import com.azure.security.keyvault.keys.cryptography.LocalKeyEncryptionKeyClientBuilder;
-import com.azure.security.keyvault.keys.cryptography.models.KeyWrapAlgorithm;
 import com.azure.security.keyvault.keys.models.JsonWebKey;
 import com.azure.security.keyvault.keys.models.KeyOperation;
 import com.azure.storage.blob.BlobClient;
@@ -38,7 +37,7 @@ public class Migration {
     }
 
     /**
-     * Extracts local key by accessing file that stores bytes. Returns the key in the form of a AsyncKeyEncryptionKey.
+     * Extracts local key by accessing file that stores bytes. Returns the key in the form of a byte array.
      * This method should be modified because it is very insecure.
      */
     private static byte[] extractLocalKey(String filename){
@@ -55,7 +54,7 @@ public class Migration {
      * Downloads client-side encrypted blob, decrypts with local key, then stores in local file temporarily
      */
     private static void decryptClientSideLocalKey(String storageAccount, String sharedKeyCred, String containerName, String blobName,
-                                                  String blobDecryptName, AsyncKeyEncryptionKey key, String path) {
+                                                  String blobDecryptName, AsyncKeyEncryptionKey key, String keyWrapAlgorithm, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
         // Creating encrypted blob client to download blob
@@ -66,7 +65,7 @@ public class Migration {
                 .blobName(blobName)
                 .buildClient();
         EncryptedBlobClient encryptedBlobClient = new EncryptedBlobClientBuilder()
-                .key(key, KeyWrapAlgorithm.A256KW.toString())
+                .key(key, keyWrapAlgorithm)
                 .blobClient(blobClient)
                 .buildEncryptedBlobClient();
 
@@ -105,37 +104,43 @@ public class Migration {
     }
 
     public static void main(String[] args) {
+        String clientSideLocalKeyFileName = null;
+        String serverSideLocalKeyFileName = null;
         String storageAccount = null;
         String sharedKeyCred = null;
         String containerName = null;
         String blobName = null;
-        String blobDecryptName = null;
+        String blobNameAfterMigration = null;
+        String keyWrapAlgorithm = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToCustomerProvidedKey\\src\\main\\java\\setup\\";
+                "ClientSideLocalKeyToCustomerProvidedKey\\src\\main\\java\\exampleCreation\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
             Properties prop = new Properties();
             prop.load(input);
+            clientSideLocalKeyFileName = prop.getProperty("clientSideLocalKeyFileName");
+            serverSideLocalKeyFileName = prop.getProperty("serverSideLocalKeyFileName");
             storageAccount = prop.getProperty("storageAccount");
             sharedKeyCred = prop.getProperty("sharedKeyCred");
             containerName = prop.getProperty("containerName");
             blobName = prop.getProperty("blobName");
-            blobDecryptName = prop.getProperty("blobDecryptName");
+            blobNameAfterMigration = prop.getProperty("blobNameAfterMigration");
+            keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
 
-        // File containing key
-        String file = pathToDir + "byteKeyInsecure.txt";
+        // Extracting keys from file
+        byte[] clientSideKey = extractLocalKey(pathToDir + clientSideLocalKeyFileName);
+        AsyncKeyEncryptionKey key = createLocalKey(clientSideKey);
+        byte[] serverSideKey = extractLocalKey(pathToDir + serverSideLocalKeyFileName);
 
-        // Extracting key from file
-        byte[] b = extractLocalKey(file);
-        AsyncKeyEncryptionKey key = createLocalKey(b);
         // Decrypts sample blob then reuploads with server-side encryption using customer-provided keys
-        decryptClientSideLocalKey(storageAccount, sharedKeyCred, containerName, blobName, blobDecryptName, key, pathToDir);
-        encryptCustomerProvided(storageAccount, sharedKeyCred, containerName, blobDecryptName, new CustomerProvidedKey(b), pathToDir);
-        cleanup(blobDecryptName, pathToDir);
+        decryptClientSideLocalKey(storageAccount, sharedKeyCred, containerName, blobName, blobNameAfterMigration, key,
+                keyWrapAlgorithm, pathToDir);
+        encryptCustomerProvided(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration, new CustomerProvidedKey(serverSideKey), pathToDir);
+        cleanup(blobNameAfterMigration, pathToDir);
     }
 }

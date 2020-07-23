@@ -1,11 +1,10 @@
-package setup;
+package exampleCreation;
 
 import com.azure.core.cryptography.AsyncKeyEncryptionKey;
-import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.identity.ClientSecretCredentialBuilder;
 import com.azure.security.keyvault.keys.KeyClient;
 import com.azure.security.keyvault.keys.KeyClientBuilder;
 import com.azure.security.keyvault.keys.cryptography.LocalKeyEncryptionKeyClientBuilder;
-import com.azure.security.keyvault.keys.cryptography.models.KeyWrapAlgorithm;
 import com.azure.security.keyvault.keys.models.CreateRsaKeyOptions;
 import com.azure.security.keyvault.keys.models.JsonWebKey;
 import com.azure.security.keyvault.keys.models.KeyOperation;
@@ -33,9 +32,11 @@ import java.util.Random;
 
 /**
  * Set up by creating client-side encrypted blob in a new container using an example local key. Saves local key in local
- * file for decrpytion. Creates key vault key and generates encryption scope for reupload during decrpytion
+ * file for decrpytion. Creates key vault key and generates encryption scope for reupload during decryption. Running the
+ * ExampleCreation is optional as long as if customer has a client-side encrypted blob ready to be migrated and
+ * encryption scope created
  */
-public class Setup {
+public class ExampleCreation {
     /**
      * Creates a random, not secure local key to be used in client-side encryption
      */
@@ -51,12 +52,17 @@ public class Setup {
     /**
      * Creating encryption scope that allows access to key from key vault
      */
-    private static void createEncryptionScope(String keyVaultUrl, String keyName, String encryptionScope,
-                                              String storageAccount, String resourceGroup, String subscription) {
+    private static void createKeyVaultEncryptionScope(String clientSecret, String tenantId, String clientId,
+                                                      String keyVaultUrl, String keyName, String encryptionScope,
+                                                      String storageAccount, String resourceGroup, String subscription) {
         // Creating key client that allows access of key vault
         KeyClient keyClient = new KeyClientBuilder()
                 .vaultUrl(keyVaultUrl)
-                .credential(new DefaultAzureCredentialBuilder().build())
+                .credential(new ClientSecretCredentialBuilder()
+                        .clientSecret(clientSecret)
+                        .tenantId(tenantId)
+                        .clientId(clientId)
+                        .build())
                 .buildClient();
 
         // Create key for use in server-side encryption
@@ -92,7 +98,7 @@ public class Setup {
      * Encrypts sample blob using local key provided and uploads to server
      */
     public static void setup(String storageAccount, String sharedKeyCred, String containerName, String blobName,
-                                            AsyncKeyEncryptionKey key) {
+                                            AsyncKeyEncryptionKey key, String keyWrapAlgorithm) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
@@ -113,42 +119,52 @@ public class Setup {
 
         // Setting encryptedKeyClient
         EncryptedBlobClient encryptedBlobClient = new EncryptedBlobClientBuilder()
-                .key(key, KeyWrapAlgorithm.A256KW.toString())
+                .key(key, keyWrapAlgorithm)
                 .blobClient(blobClient)
                 .buildEncryptedBlobClient();
 
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToCustomerManagedKey\\src\\main\\java\\setup\\" + blobName, true);
+                "ClientSideLocalKeyToCustomerManagedKey\\src\\main\\java\\exampleCreation\\" + blobName, true);
     }
 
     public static void main(String[] args) {
+        String clientId = null;
+        String clientSecret = null;
+        String tenantId = null;
         String storageAccount = null;
         String sharedKeyCred = null;
         String keyVaultUrl = null;
         String resourceGroup = null;
         String subscription = null;
+        String clientSideLocalKeyFileName = null;
         String containerName = null;
         String blobName = null;
-        String keyName = null;
+        String serverSideEncryptionKeyName = null;
         String encryptionScope = null;
+        String keyWrapAlgorithm = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToCustomerManagedKey\\src\\main\\java\\setup\\";
+                "ClientSideLocalKeyToCustomerManagedKey\\src\\main\\java\\exampleCreation\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
             Properties prop = new Properties();
             prop.load(input);
+            clientSecret = prop.getProperty("clientSecret");
+            clientId = prop.getProperty("clientId");
+            tenantId = prop.getProperty("tenantId");
             storageAccount = prop.getProperty("storageAccount");
             sharedKeyCred = prop.getProperty("sharedKeyCred");
             keyVaultUrl = prop.getProperty("keyVaultUrl");
             resourceGroup = prop.getProperty("resourceGroup");
             subscription = prop.getProperty("subscription");
+            clientSideLocalKeyFileName = prop.getProperty("clientSideLocalKeyFileName");
             containerName = prop.getProperty("containerName");
             blobName = prop.getProperty("blobName");
-            keyName = prop.getProperty("keyName");
+            serverSideEncryptionKeyName = prop.getProperty("serverSideEncryptionKeyName");
             encryptionScope = prop.getProperty("encryptionScope");
+            keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -158,7 +174,7 @@ public class Setup {
         new Random().nextBytes(b);
         AsyncKeyEncryptionKey key = createLocalKey(b);
         try {
-            OutputStream os = new FileOutputStream(pathToDir + "byteKeyInsecure.txt");
+            OutputStream os = new FileOutputStream(pathToDir + clientSideLocalKeyFileName);
             os.write(b);
             os.close();
         } catch (Exception e) {
@@ -167,9 +183,10 @@ public class Setup {
 
         // Create an example encryption scope to access given key that will allow for server-side encryption using
         // customer-managed keys
-        createEncryptionScope(keyVaultUrl, keyName, encryptionScope, storageAccount, resourceGroup, subscription);
+        createKeyVaultEncryptionScope(clientSecret, tenantId, clientId,
+                keyVaultUrl, serverSideEncryptionKeyName, encryptionScope, storageAccount, resourceGroup, subscription);
 
         // Setup where sample blob is client-side encrypted and uploaded to server
-        setup(storageAccount, sharedKeyCred, containerName, blobName, key);
+        setup(storageAccount, sharedKeyCred, containerName, blobName, key, keyWrapAlgorithm);
     }
 }

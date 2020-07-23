@@ -1,10 +1,9 @@
 import com.azure.core.credential.TokenCredential;
 import com.azure.core.cryptography.AsyncKeyEncryptionKey;
-import com.azure.identity.DefaultAzureCredentialBuilder;
+import com.azure.identity.ClientSecretCredentialBuilder;
 import com.azure.security.keyvault.keys.KeyClient;
 import com.azure.security.keyvault.keys.KeyClientBuilder;
 import com.azure.security.keyvault.keys.cryptography.KeyEncryptionKeyClientBuilder;
-import com.azure.security.keyvault.keys.cryptography.models.KeyWrapAlgorithm;
 import com.azure.security.keyvault.keys.models.KeyVaultKey;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobClientBuilder;
@@ -17,8 +16,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Properties;
-import java.util.Random;
 
 /**
  * Downloads and decrypts blob using key vault, creates an example local key, and reuploads blob with customer-provided
@@ -37,11 +37,26 @@ public class Migration {
     }
 
     /**
+     * Extracts local key by accessing file that stores bytes. Returns the key in the form of a byte array.
+     * This method should be modified because it is very insecure.
+     */
+    private static byte[] extractLocalKey(String filename){
+        byte[] b = null;
+        try {
+            b = Files.readAllBytes(Paths.get(filename));
+        } catch (Exception e) {
+            System.out.println("Exception when extracting key: " + e);
+        }
+        return b;
+    }
+
+    /**
      * Downloads client-side encrypted blob, decrypts with key vault, then stores in local file temporarily
      */
-    private static void decryptClientSideKeyVaultKey(String storageAccount, String sharedKeyCred, String containerName,
+    private static void decryptClientSideKeyVaultKey(String clientSecret, String tenantId, String clientId,
+                                                     String storageAccount, String sharedKeyCred, String containerName,
                                                      String blobName, String blobDecryptName, String keyVaultUrl, String keyname,
-                                                     String path){
+                                                     String keyWrapAlgorithm, String path){
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
         // Setting encryptedKeyClient with key vault key
@@ -51,14 +66,18 @@ public class Migration {
                 .containerName(containerName)
                 .blobName(blobName)
                 .buildClient();
-        TokenCredential cred = new DefaultAzureCredentialBuilder().build();
+        TokenCredential cred = new ClientSecretCredentialBuilder()
+                .clientSecret(clientSecret)
+                .tenantId(tenantId)
+                .clientId(clientId)
+                .build();
         KeyClient keyClient = new KeyClientBuilder()
                 .vaultUrl(keyVaultUrl)
                 .credential(cred)
                 .buildClient();
         KeyVaultKey rsaKey = keyClient.getKey(keyname);
         EncryptedBlobClient encryptedBlobClient = new EncryptedBlobClientBuilder()
-                .key(createAsyncKey(rsaKey, cred), KeyWrapAlgorithm.RSA_OAEP.toString())
+                .key(createAsyncKey(rsaKey, cred), keyWrapAlgorithm)
                 .blobClient(blobClient)
                 .buildEncryptedBlobClient();
 
@@ -96,39 +115,53 @@ public class Migration {
     }
 
     public static void main(String[] args) {
+        String clientId = null;
+        String clientSecret = null;
+        String tenantId = null;
         String storageAccount = null;
         String sharedKeyCred = null;
         String keyVaultUrl = null;
         String containerName = null;
         String blobName = null;
-        String blobDecryptName = null;
-        String keyName = null;
+        String blobNameAfterMigration = null;
+        String clientSideEncryptionKeyName = null;
+        String localKeyFileName = null;
+        String keyWrapAlgorithm = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideKeyVaultKeyToCustomerProvidedKey\\src\\main\\java\\setup\\";
+                "ClientSideKeyVaultKeyToCustomerProvidedKey\\src\\main\\java\\exampleCreation\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
             Properties prop = new Properties();
             prop.load(input);
+            clientSecret = prop.getProperty("clientSecret");
+            clientId = prop.getProperty("clientId");
+            tenantId = prop.getProperty("tenantId");
             storageAccount = prop.getProperty("storageAccount");
             sharedKeyCred = prop.getProperty("sharedKeyCred");
             keyVaultUrl = prop.getProperty("keyVaultUrl");
             containerName = prop.getProperty("containerName");
             blobName = prop.getProperty("blobName");
-            blobDecryptName = prop.getProperty("blobDecryptName");
-            keyName = prop.getProperty("keyName");
+            blobNameAfterMigration = prop.getProperty("blobNameAfterMigration");
+            clientSideEncryptionKeyName = prop.getProperty("clientSideEncryptionKeyName");
+            localKeyFileName = prop.getProperty("localKeyFileName");
+            keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
 
-        // Creating local key for server-side encryption
-        byte[] b = new byte[32];
-        new Random().nextBytes(b);
+        // File containing key
+        String file = pathToDir + localKeyFileName;
+
+        // Extracting key from file
+        byte[] b = extractLocalKey(file);
+
         // Decrypts sample blob then reuploads with server-side encryption using Microsoft-managed keys
-        decryptClientSideKeyVaultKey(storageAccount, sharedKeyCred, containerName, blobName, blobDecryptName, keyVaultUrl,
-                keyName, pathToDir);
-        encryptCustomerProvided(storageAccount, sharedKeyCred, containerName, blobDecryptName, new CustomerProvidedKey(b), pathToDir);
-        cleanup(blobDecryptName, pathToDir);
+        decryptClientSideKeyVaultKey(clientSecret, tenantId, clientId,
+                storageAccount, sharedKeyCred, containerName, blobName, blobNameAfterMigration, keyVaultUrl,
+                clientSideEncryptionKeyName, keyWrapAlgorithm, pathToDir);
+        encryptCustomerProvided(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration, new CustomerProvidedKey(b), pathToDir);
+        cleanup(blobNameAfterMigration, pathToDir);
     }
 }

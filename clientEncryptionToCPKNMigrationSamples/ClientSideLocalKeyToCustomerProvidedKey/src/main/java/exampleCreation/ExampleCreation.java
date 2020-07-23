@@ -1,8 +1,7 @@
-package setup;
+package exampleCreation;
 
 import com.azure.core.cryptography.AsyncKeyEncryptionKey;
 import com.azure.security.keyvault.keys.cryptography.LocalKeyEncryptionKeyClientBuilder;
-import com.azure.security.keyvault.keys.cryptography.models.KeyWrapAlgorithm;
 import com.azure.security.keyvault.keys.models.JsonWebKey;
 import com.azure.security.keyvault.keys.models.KeyOperation;
 import com.azure.storage.blob.BlobClient;
@@ -25,9 +24,10 @@ import java.util.Random;
 
 /**
  * Set up by creating client-side encrypted blob in a new container using an example local key. Saves local key in local
- * file for decrpytion
+ * file for decryption. Running the ExampleCreation is optional as long as if customer has a client-side encrypted blob
+ * ready to be migrated and local key created for reupload
  */
-public class Setup {
+public class ExampleCreation {
     /**
      * Creates a random, not secure local key to be used in client-side encryption
      */
@@ -44,7 +44,7 @@ public class Setup {
      * Encrypts sample blob using local key provided and uploads to server
      */
     public static void setup(String storageAccount, String sharedKeyCred, String containerName, String blobName,
-                             AsyncKeyEncryptionKey key) {
+                             AsyncKeyEncryptionKey key, String keyWrapAlgorithm) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
@@ -65,43 +65,46 @@ public class Setup {
 
         // Setting encryptedKeyClient
         EncryptedBlobClient encryptedBlobClient = new EncryptedBlobClientBuilder()
-                .key(key, KeyWrapAlgorithm.A256KW.toString())
+                .key(key, keyWrapAlgorithm)
                 .blobClient(blobClient)
                 .buildEncryptedBlobClient();
 
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\"
-                + blobName, true);
+                "ClientSideLocalKeyToCustomerProvidedKey\\src\\main\\java\\exampleCreation\\" + blobName, true);
     }
 
     public static void main(String[] args) {
+        String localKeyFileName = null;
         String storageAccount = null;
         String sharedKeyCred = null;
         String containerName = null;
         String blobName = null;
+        String keyWrapAlgorithm = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\";
+                "ClientSideLocalKeyToCustomerProvidedKey\\src\\main\\java\\exampleCreation\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
             Properties prop = new Properties();
             prop.load(input);
+            localKeyFileName = prop.getProperty("clientSideLocalKeyFileName");
             storageAccount = prop.getProperty("storageAccount");
             sharedKeyCred = prop.getProperty("sharedKeyCred");
             containerName = prop.getProperty("containerName");
             blobName = prop.getProperty("blobName");
+            keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
 
-        // Creating random local key and storing bytes insecurely into local file for later use in decrypting
+        // Creating random local key and insecurely storing bytes into local file for later use in decrypting
         byte[] b = new byte[32];
         new Random().nextBytes(b);
         AsyncKeyEncryptionKey key = createLocalKey(b);
         try {
-            OutputStream os = new FileOutputStream(pathToDir + "byteKeyInsecure.txt");
+            OutputStream os = new FileOutputStream(pathToDir + localKeyFileName);
             os.write(b);
             os.close();
         } catch (Exception e) {
@@ -109,6 +112,6 @@ public class Setup {
         }
 
         // Setup where sample blob is client-side encrypted and uploaded to server
-        setup(storageAccount, sharedKeyCred, containerName, blobName, key);
+        setup(storageAccount, sharedKeyCred, containerName, blobName, key, keyWrapAlgorithm);
     }
 }

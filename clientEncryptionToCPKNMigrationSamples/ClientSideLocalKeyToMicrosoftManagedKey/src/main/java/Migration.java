@@ -1,6 +1,5 @@
 import com.azure.core.cryptography.AsyncKeyEncryptionKey;
 import com.azure.security.keyvault.keys.cryptography.LocalKeyEncryptionKeyClientBuilder;
-import com.azure.security.keyvault.keys.cryptography.models.KeyWrapAlgorithm;
 import com.azure.security.keyvault.keys.models.JsonWebKey;
 import com.azure.security.keyvault.keys.models.KeyOperation;
 import com.azure.storage.blob.BlobClient;
@@ -37,7 +36,7 @@ public class Migration {
     }
 
     /**
-     * Extracts local key by accessing file that stores bytes. Returns the key in the form of a AsyncKeyEncryptionKey.
+     * Extracts local key by accessing file that stores bytes. Returns the key in the form of a byte array.
      * This method should be modified because it is very insecure.
      */
     private static byte[] extractLocalKey(String filename){
@@ -54,7 +53,8 @@ public class Migration {
      * Downloads client-side encrypted blob, decrypts with local key, then stores in local file temporarily
      */
     private static void decryptClientSideLocalKey(String storageAccount, String sharedKeyCred, String containerName, String blobName,
-                                                  String blobDecryptName, AsyncKeyEncryptionKey key, String path) {
+                                                  String blobDecryptName, AsyncKeyEncryptionKey key,
+                                                  String keyWrapAlgorithm, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
         // Creating encrypted blob client to download blob
@@ -65,7 +65,7 @@ public class Migration {
                 .blobName(blobName)
                 .buildClient();
         EncryptedBlobClient encryptedBlobClient = new EncryptedBlobClientBuilder()
-                .key(key, KeyWrapAlgorithm.A256KW.toString())
+                .key(key, keyWrapAlgorithm)
                 .blobClient(blobClient)
                 .buildEncryptedBlobClient();
 
@@ -77,7 +77,7 @@ public class Migration {
      * Reuploads blob with server-side encryption using a Microsoft-managed key
      */
     private static void encryptMicrosoftManaged(String storageAccount, String sharedKeyCred, String containerName,
-                                                String blobDecryptName, String path) {
+                                                String blobDecryptName, String encryptionScope, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
         // Creating blob client for reuploading
@@ -85,6 +85,7 @@ public class Migration {
                 .endpoint(storageAccountUrl)
                 .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
                 .containerName(containerName)
+                .encryptionScope(encryptionScope)
                 .blobName(blobDecryptName);
         BlobClient blobClientDecrypted = blobClientBuilder.buildClient();
 
@@ -106,10 +107,13 @@ public class Migration {
         String sharedKeyCred = null;
         String containerName = null;
         String blobName = null;
-        String blobDecryptName = null;
+        String blobNameAfterMigration = null;
+        String encryptionScope = null;
+        String keyWrapAlgorithm = null;
+        String clientSideLocalKeyFileName = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\setup\\";
+                "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\exampleCreation\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
@@ -119,21 +123,25 @@ public class Migration {
             sharedKeyCred = prop.getProperty("sharedKeyCred");
             containerName = prop.getProperty("containerName");
             blobName = prop.getProperty("blobName");
-            blobDecryptName = prop.getProperty("blobDecryptName");
+            blobNameAfterMigration = prop.getProperty("blobNameAfterMigration");
+            encryptionScope = prop.getProperty("encryptionScope");
+            keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
+            clientSideLocalKeyFileName = prop.getProperty("clientSideLocalKeyFileName");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
 
         // File containing key
-        String file = pathToDir + "byteKeyInsecure.txt";
+        String file = pathToDir + clientSideLocalKeyFileName;
 
         // Extracting key from file
         byte[] b = extractLocalKey(file);
         AsyncKeyEncryptionKey key = createLocalKey(b);
         // Decrypts sample blob then reuploads with server-side encryption using Microsoft-managed keys
-        decryptClientSideLocalKey(storageAccount, sharedKeyCred, containerName, blobName, blobDecryptName, key, pathToDir);
-        encryptMicrosoftManaged(storageAccount, sharedKeyCred, containerName, blobDecryptName, pathToDir);
-        cleanup(blobDecryptName, pathToDir);
+        decryptClientSideLocalKey(storageAccount, sharedKeyCred, containerName, blobName, blobNameAfterMigration, key,
+                keyWrapAlgorithm, pathToDir);
+        encryptMicrosoftManaged(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration, encryptionScope, pathToDir);
+        cleanup(blobNameAfterMigration, pathToDir);
 
     }
 }
