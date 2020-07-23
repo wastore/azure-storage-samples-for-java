@@ -117,7 +117,7 @@ public class ExampleDataCreator {
 
         // Uploading example blob with client-side encryption
         encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideKeyVaultKeyToMicrosoftManagedKey\\src\\main\\java\\exampleCreation\\" + blobName, true);
+                "ClientSideKeyVaultKeyToMicrosoftManagedKey\\src\\main\\java\\exampleDataCreator\\" + blobName, true);
     }
 
     public static void main(String[] args) {
@@ -136,7 +136,7 @@ public class ExampleDataCreator {
         String keyWrapAlgorithm = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideKeyVaultKeyToMicrosoftManagedKey\\src\\main\\java\\exampleCreation\\";
+                "ClientSideKeyVaultKeyToMicrosoftManagedKey\\src\\main\\java\\exampleDataCreator\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {

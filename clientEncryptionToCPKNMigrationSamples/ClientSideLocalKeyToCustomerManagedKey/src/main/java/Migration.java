@@ -112,7 +112,7 @@ public class Migration {
         String keyWrapAlgorithm = null;
 
         String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToCustomerManagedKey\\src\\main\\java\\exampleCreation\\";
+                "ClientSideLocalKeyToCustomerManagedKey\\src\\main\\java\\exampleDataCreator\\";
 
         // Extracting variables from config file
         try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
