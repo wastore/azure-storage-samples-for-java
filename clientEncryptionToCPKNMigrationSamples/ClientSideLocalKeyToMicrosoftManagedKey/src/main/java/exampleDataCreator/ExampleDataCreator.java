@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.Random;
@@ -31,6 +33,53 @@ import java.util.Random;
  * encryption scope created
  */
 public class ExampleDataCreator {
+    public static void main(String[] args) throws IOException {
+        String clientSideLocalKeyFileName = null;
+        String storageAccount = null;
+        String sharedKeyCred = null;
+        String resourceGroup = null;
+        String subscription = null;
+        String containerName = null;
+        String blobName = null;
+        String encryptionScope = null;
+        String keyWrapAlgorithm = null;
+
+        Path currentPath = Paths.get(System.getProperty("user.dir"));
+        Path pathToDir = Paths.get(currentPath.toString(), "clientEncryptionToCPKNMigrationSamples",
+                "ClientSideLocalKeyToMicrosoftManagedKey", "src", "main", "java", "exampleDataCreator");
+        String configPath = Paths.get(pathToDir.toString(), "app.config").toString();
+
+        // Extracting variables from config file
+        InputStream input = new FileInputStream(configPath);
+        Properties prop = new Properties();
+        prop.load(input);
+        clientSideLocalKeyFileName = prop.getProperty("clientSideLocalKeyFileName");
+        storageAccount = prop.getProperty("storageAccount");
+        sharedKeyCred = prop.getProperty("sharedKeyCred");
+        containerName = prop.getProperty("containerName");
+        blobName = prop.getProperty("blobName");
+        resourceGroup = prop.getProperty("resourceGroup");
+        subscription = prop.getProperty("subscription");
+        encryptionScope = prop.getProperty("encryptionScope");
+        keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
+
+        String blobPath = Paths.get(pathToDir.toString(), blobName).toString();
+        String localKeyPath = Paths.get(pathToDir.toString(), clientSideLocalKeyFileName).toString();
+
+        // Creating random local key and storing bytes insecurely into local file for later use in decrypting
+        byte[] b = new byte[32];
+        new Random().nextBytes(b);
+        AsyncKeyEncryptionKey key = createLocalKey(b);
+        OutputStream os = new FileOutputStream(localKeyPath);
+        os.write(b);
+        os.close();
+
+        // Create Microsoft-managed key encryption scope
+        createEncryptionScope(encryptionScope, storageAccount, resourceGroup, subscription);
+        // Setup where sample blob is client-side encrypted and uploaded to server
+        setup(storageAccount, sharedKeyCred, containerName, blobName, key, keyWrapAlgorithm, blobPath);
+    }
+
     /**
      * Creates a random, not secure local key to be used in client-side encryption
      */
@@ -47,7 +96,7 @@ public class ExampleDataCreator {
      * Creating encryption scope for a Microsoft-managed key
      */
     private static void createEncryptionScope(String encryptionScope,
-                                              String storageAccount, String resourceGroup, String subscription) {
+                                              String storageAccount, String resourceGroup, String subscription) throws IOException {
         // Template for command:
         // az storage account encryption-scope create --name <encryptionScopeName> -s Microsoft.Storage
         //      --account-name <storageAccountName> -g <resourceGroupName> --subscription <subscriptionName>
@@ -57,25 +106,18 @@ public class ExampleDataCreator {
 
         // Running command line command to create encryption scope for given key
         Process p = null;
-        try {
-            p = new ProcessBuilder("cmd.exe", "/c", command).start();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
+        p = new ProcessBuilder("cmd.exe", "/c", command).start();
+
         // Reading outputs from command line
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-        try {
-            while ((r.readLine()) != null) {}
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        while ((r.readLine()) != null) {}
     }
 
     /**
      * Encrypts sample blob using local key provided and uploads to server
      */
     public static void setup(String storageAccount, String sharedKeyCred, String containerName, String blobName,
-                             AsyncKeyEncryptionKey key, String keyWrapAlgorithm) {
+                             AsyncKeyEncryptionKey key, String keyWrapAlgorithm, String blobPath) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
@@ -101,58 +143,6 @@ public class ExampleDataCreator {
                 .buildEncryptedBlobClient();
 
         // Uploading example blob with client-side encryption
-        encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\exampleDataCreator\\"
-                + blobName, true);
-    }
-
-    public static void main(String[] args) {
-        String clientSideLocalKeyFileName = null;
-        String storageAccount = null;
-        String sharedKeyCred = null;
-        String resourceGroup = null;
-        String subscription = null;
-        String containerName = null;
-        String blobName = null;
-        String encryptionScope = null;
-        String keyWrapAlgorithm = null;
-
-        String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToMicrosoftManagedKey\\src\\main\\java\\exampleDataCreator\\";
-
-        // Extracting variables from config file
-        try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
-            Properties prop = new Properties();
-            prop.load(input);
-            clientSideLocalKeyFileName = prop.getProperty("clientSideLocalKeyFileName");
-            storageAccount = prop.getProperty("storageAccount");
-            sharedKeyCred = prop.getProperty("sharedKeyCred");
-            containerName = prop.getProperty("containerName");
-            blobName = prop.getProperty("blobName");
-            resourceGroup = prop.getProperty("resourceGroup");
-            subscription = prop.getProperty("subscription");
-            encryptionScope = prop.getProperty("encryptionScope");
-            keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-
-        // Creating random local key and storing bytes insecurely into local file for later use in decrypting
-        byte[] b = new byte[32];
-        new Random().nextBytes(b);
-        AsyncKeyEncryptionKey key = createLocalKey(b);
-        try {
-            OutputStream os = new FileOutputStream(pathToDir + clientSideLocalKeyFileName);
-            os.write(b);
-            os.close();
-        } catch (Exception e) {
-            System.out.println("Exception in saving key: " + e);
-        }
-
-        // Create Microsoft-managed key encryption scope
-        createEncryptionScope(encryptionScope, storageAccount, resourceGroup, subscription);
-        // Setup where sample blob is client-side encrypted and uploaded to server
-        setup(storageAccount, sharedKeyCred, containerName, blobName, key, keyWrapAlgorithm);
+        encryptedBlobClient.uploadFromFile(blobPath, true);
     }
 }

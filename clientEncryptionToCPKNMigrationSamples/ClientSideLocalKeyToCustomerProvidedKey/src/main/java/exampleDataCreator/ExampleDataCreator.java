@@ -18,6 +18,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.Random;
@@ -28,6 +30,45 @@ import java.util.Random;
  * ready to be migrated and local key created for reupload
  */
 public class ExampleDataCreator {
+    public static void main(String[] args) throws IOException {
+        String clientSideLocalKeyFileName = null;
+        String storageAccount = null;
+        String sharedKeyCred = null;
+        String containerName = null;
+        String blobName = null;
+        String keyWrapAlgorithm = null;
+
+        Path currentPath = Paths.get(System.getProperty("user.dir"));
+        Path pathToDir = Paths.get(currentPath.toString(), "clientEncryptionToCPKNMigrationSamples",
+                "ClientSideLocalKeyToCustomerProvidedKey", "src", "main", "java", "exampleDataCreator");
+        String configPath = Paths.get(pathToDir.toString(), "app.config").toString();
+
+        // Extracting variables from config file
+        InputStream input = new FileInputStream(configPath);
+        Properties prop = new Properties();
+        prop.load(input);
+        clientSideLocalKeyFileName = prop.getProperty("clientSideLocalKeyFileName");
+        storageAccount = prop.getProperty("storageAccount");
+        sharedKeyCred = prop.getProperty("sharedKeyCred");
+        containerName = prop.getProperty("containerName");
+        blobName = prop.getProperty("blobName");
+        keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
+
+        String blobPath = Paths.get(pathToDir.toString(), blobName).toString();
+        String localKeyPath = Paths.get(pathToDir.toString(), clientSideLocalKeyFileName).toString();
+
+        // Creating random local key and insecurely storing bytes into local file for later use in decrypting
+        byte[] b = new byte[32];
+        new Random().nextBytes(b);
+        AsyncKeyEncryptionKey key = createLocalKey(b);
+        OutputStream os = new FileOutputStream(localKeyPath);
+        os.write(b);
+        os.close();
+
+        // Setup where sample blob is client-side encrypted and uploaded to server
+        setup(storageAccount, sharedKeyCred, containerName, blobName, key, keyWrapAlgorithm, blobPath);
+    }
+
     /**
      * Creates a random, not secure local key to be used in client-side encryption
      */
@@ -44,7 +85,7 @@ public class ExampleDataCreator {
      * Encrypts sample blob using local key provided and uploads to server
      */
     public static void setup(String storageAccount, String sharedKeyCred, String containerName, String blobName,
-                             AsyncKeyEncryptionKey key, String keyWrapAlgorithm) {
+                             AsyncKeyEncryptionKey key, String keyWrapAlgorithm, String blobPath) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
         // Creating a BlobServiceClient that allows us to perform container and blob operations, given our storage
@@ -70,48 +111,6 @@ public class ExampleDataCreator {
                 .buildEncryptedBlobClient();
 
         // Uploading example blob with client-side encryption
-        encryptedBlobClient.uploadFromFile("clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToCustomerProvidedKey\\src\\main\\java\\exampleDataCreator\\" + blobName, true);
-    }
-
-    public static void main(String[] args) {
-        String localKeyFileName = null;
-        String storageAccount = null;
-        String sharedKeyCred = null;
-        String containerName = null;
-        String blobName = null;
-        String keyWrapAlgorithm = null;
-
-        String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToCustomerProvidedKey\\src\\main\\java\\exampleDataCreator\\";
-
-        // Extracting variables from config file
-        try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
-            Properties prop = new Properties();
-            prop.load(input);
-            localKeyFileName = prop.getProperty("clientSideLocalKeyFileName");
-            storageAccount = prop.getProperty("storageAccount");
-            sharedKeyCred = prop.getProperty("sharedKeyCred");
-            containerName = prop.getProperty("containerName");
-            blobName = prop.getProperty("blobName");
-            keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-
-        // Creating random local key and insecurely storing bytes into local file for later use in decrypting
-        byte[] b = new byte[32];
-        new Random().nextBytes(b);
-        AsyncKeyEncryptionKey key = createLocalKey(b);
-        try {
-            OutputStream os = new FileOutputStream(pathToDir + localKeyFileName);
-            os.write(b);
-            os.close();
-        } catch (Exception e) {
-            System.out.println("Exception in saving key: " + e);
-        }
-
-        // Setup where sample blob is client-side encrypted and uploaded to server
-        setup(storageAccount, sharedKeyCred, containerName, blobName, key, keyWrapAlgorithm);
+        encryptedBlobClient.uploadFromFile(blobPath, true);
     }
 }

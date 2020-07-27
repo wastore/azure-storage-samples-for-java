@@ -14,6 +14,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Properties;
@@ -23,6 +24,59 @@ import java.util.Properties;
  * through encryption scopes
  */
 public class Migration {
+    public static void main(String[] args) throws IOException {
+        String clientSideLocalKeyFileName = null;
+        String storageAccount = null;
+        String sharedKeyCred = null;
+        String containerName = null;
+        String blobName = null;
+        String blobNameAfterMigration = null;
+        String encryptionScope = null;
+        String keyWrapAlgorithm = null;
+
+        Path currentPath = Paths.get(System.getProperty("user.dir"));
+        Path pathToDir = Paths.get(currentPath.toString(), "clientEncryptionToCPKNMigrationSamples",
+                "ClientSideLocalKeyToCustomerManagedKey", "src", "main", "java", "exampleDataCreator");
+        String configPath = Paths.get(pathToDir.toString(), "app.config").toString();
+
+        // Extracting variables from config file
+        InputStream input = new FileInputStream(configPath);
+        Properties prop = new Properties();
+        prop.load(input);
+        clientSideLocalKeyFileName = prop.getProperty("clientSideLocalKeyFileName");
+        storageAccount = prop.getProperty("storageAccount");
+        sharedKeyCred = prop.getProperty("sharedKeyCred");
+        containerName = prop.getProperty("containerName");
+        blobName = prop.getProperty("blobName");
+        blobNameAfterMigration = prop.getProperty("blobNameAfterMigration");
+        encryptionScope = prop.getProperty("encryptionScope");
+        keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
+
+        String blobAfterMigrationPath = Paths.get(pathToDir.toString(), blobNameAfterMigration).toString();
+        String localKeyPath = Paths.get(pathToDir.toString(), clientSideLocalKeyFileName).toString();
+
+        // Extracting key from file
+        byte[] b = extractLocalKey(localKeyPath);
+        AsyncKeyEncryptionKey key = createLocalKey(b);
+        // Decrypts sample blob then reuploads with server-side encryption using customer-managed keys
+        try {
+            decryptClientSideLocalKey(storageAccount, sharedKeyCred, containerName, blobName, key,
+                    keyWrapAlgorithm, blobAfterMigrationPath);
+            encryptCustomerManagedKey(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration, encryptionScope,
+                    blobAfterMigrationPath);
+        } finally {
+            cleanup(blobAfterMigrationPath);
+        }
+    }
+
+    /**
+     * Extracts local key by accessing file that stores bytes. Returns the key in the form of a byte array.
+     * This method should be modified because it is very insecure.
+     */
+    private static byte[] extractLocalKey(String filename) throws IOException {
+        return Files.readAllBytes(Paths.get(filename));
+    }
+
     /**
      * Creates a random, not secure local key to be used in client-side encryption
      */
@@ -36,24 +90,10 @@ public class Migration {
     }
 
     /**
-     * Extracts local key by accessing file that stores bytes. Returns the key in the form of a byte array.
-     * This method should be modified because it is very insecure.
-     */
-    private static byte[] extractLocalKey(String filename){
-        byte[] b = null;
-        try {
-            b = Files.readAllBytes(Paths.get(filename));
-        } catch (Exception e) {
-            System.out.println("Exception when extracting key: " + e);
-        }
-        return b;
-    }
-
-    /**
      * Downloads client-side encrypted blob, decrypts with a local key, then stores in local file temporarily
      */
     private static void decryptClientSideLocalKey(String storageAccount, String sharedKeyCred, String containerName,
-                                                  String blobName, String blobDecryptName, AsyncKeyEncryptionKey key,
+                                                  String blobName, AsyncKeyEncryptionKey key,
                                                   String keyWrapAlgorithm, String path) {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
         // Creating encrypted blob client to download blob
@@ -69,7 +109,7 @@ public class Migration {
                 .buildEncryptedBlobClient();
 
         // Downloading encrypted blob, blob is decrypted upon download
-        encryptedBlobClient.downloadToFile(path + blobDecryptName);
+        encryptedBlobClient.downloadToFile(path);
     }
 
     /**
@@ -89,58 +129,15 @@ public class Migration {
         BlobClient blobClientDecrypted = blobClientBuilder.buildClient();
 
         // Uploading file to server
-        blobClientDecrypted.uploadFromFile(path + blobDecryptName, true);
+        blobClientDecrypted.uploadFromFile(path, true);
     }
 
     /**
      * Cleans up temp files created during decryption
      */
-    private static void cleanup(String blobDecryptName, String path) {
+    private static void cleanup(String path) {
         // Cleaning up by deleting local save of encrypted blob
-        File localFile = new File(path + blobDecryptName);
+        File localFile = new File(path);
         localFile.delete();
-    }
-
-    public static void main(String[] args) {
-        String clientSideLocalKeyFileName = null;
-        String storageAccount = null;
-        String sharedKeyCred = null;
-        String containerName = null;
-        String blobName = null;
-        String blobNameAfterMigration = null;
-        String encryptionScope = null;
-        String keyWrapAlgorithm = null;
-
-        String pathToDir = "clientEncryptionToCPKNMigrationSamples\\" +
-                "ClientSideLocalKeyToCustomerManagedKey\\src\\main\\java\\exampleDataCreator\\";
-
-        // Extracting variables from config file
-        try (InputStream input = new FileInputStream(pathToDir + "app.config")) {
-            Properties prop = new Properties();
-            prop.load(input);
-            clientSideLocalKeyFileName = prop.getProperty("clientSideLocalKeyFileName");
-            storageAccount = prop.getProperty("storageAccount");
-            sharedKeyCred = prop.getProperty("sharedKeyCred");
-            containerName = prop.getProperty("containerName");
-            blobName = prop.getProperty("blobName");
-            blobNameAfterMigration = prop.getProperty("blobNameAfterMigration");
-            encryptionScope = prop.getProperty("encryptionScope");
-            keyWrapAlgorithm = prop.getProperty("keyWrapAlgorithm");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-
-        // File containing key
-        String file = pathToDir + clientSideLocalKeyFileName;
-
-        // Extracting key from file
-        byte[] b = extractLocalKey(file);
-        AsyncKeyEncryptionKey key = createLocalKey(b);
-        // Decrypts sample blob then reuploads with server-side encryption using customer-managed keys
-        decryptClientSideLocalKey(storageAccount, sharedKeyCred, containerName, blobName, blobNameAfterMigration, key,
-                keyWrapAlgorithm, pathToDir);
-        encryptCustomerManagedKey(storageAccount, sharedKeyCred, containerName, blobNameAfterMigration, encryptionScope,
-                pathToDir);
-        cleanup(blobNameAfterMigration, pathToDir);
     }
 }

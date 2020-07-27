@@ -24,8 +24,11 @@ Requires the following variables in same app.config file, should not be changed 
  * *blobNameAfterMigration* (name for reuploaded blob)
  * *encryptionScope* (name of encryption scope)
 
-#### How to use files
-First, ensure to follow setup as described above and that the app.config file is filled out completely. Variables that
-have already been filled out are left as is if ExampleDataCreator.java will be run. Running the ExampleDataCreator is optional as 
-long as the customer has a client-side encrypted blob ready to be migrated and an encryption scope created. After 
-ExampleDataCreator is run, run Migration to perform migration to server-side encryption. 
+#### Step-by-Step Instructions to Run Program
+1. Follow setup instructions above. Make sure all necessary installations are done, service principal is created, and
+storage account is made
+2. Navigate to directory exampleDataCreator
+3. Open app.config and fill in values for all variables
+4. Compile ExampleDataCreator.java and run ExampleDataCreator
+5. Navigate up one directory
+6. Compile Migration.java and run Migration
