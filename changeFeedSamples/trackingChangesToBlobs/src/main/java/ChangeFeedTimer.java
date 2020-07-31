@@ -17,14 +17,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 public class ChangeFeedTimer {
     /**
@@ -38,8 +35,6 @@ public class ChangeFeedTimer {
         // Delay between runs of timer. Currently set to an hour
         int interval = 3600000;
 
-        String sharedKeyCred = null;
-        String storageAccount = null;
 
         Path currentPath = Paths.get(System.getProperty("user.dir"));
         Path pathToDir = Paths.get(currentPath.toString(), "changeFeedSamples",
@@ -50,8 +45,10 @@ public class ChangeFeedTimer {
         InputStream input = new FileInputStream(configPath);
         Properties prop = new Properties();
         prop.load(input);
-        sharedKeyCred = prop.getProperty("sharedKeyCred");
-        storageAccount = prop.getProperty("storageAccount");
+        String sharedKeyCred = prop.getProperty("sharedKeyCred");
+        String storageAccount = prop.getProperty("storageAccount");
+        String createAdditionalEvents = prop.getProperty("createAdditionalEvents");
+        boolean createAdditionalEventsBool = Boolean.parseBoolean(createAdditionalEvents);
 
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
@@ -72,7 +69,8 @@ public class ChangeFeedTimer {
 
         // Create a Timer
         Timer timer = new Timer();
-        TimerTask task = new ChangeFeedHelper(blobContainerClient, blobClient, changefeedClient, cursor);
+        TimerTask task = new ChangeFeedHelper(blobServiceClient, blobContainerClient, blobClient, changefeedClient,
+                createAdditionalEventsBool, cursor);
 
         // Running on schedule
         timer.scheduleAtFixedRate(task, 0, interval);
@@ -94,9 +92,12 @@ public class ChangeFeedTimer {
 
 class ChangeFeedHelper extends TimerTask {
     public String cursor;
+    public BlobServiceClient serviceClient;
     public BlobContainerClient containerClient;
     public BlobClient blobClient;
     public BlobChangefeedClient changefeedClient;
+    public boolean createAdditionalEvents;
+    private int blobNumber = 10;
 
     // Filtering
     String trackedContainer = "containers/test-changefeed-container";
@@ -106,11 +107,15 @@ class ChangeFeedHelper extends TimerTask {
     Predicate<BlobChangefeedEvent> checkBlobName = (event) -> event.getSubject().contains(trackedBlob);
     Predicate<BlobChangefeedEvent> checkEventType = (event) -> event.getEventType().toString().equals(eventType);
 
-    public ChangeFeedHelper(BlobContainerClient containerClient, BlobClient blobClient, BlobChangefeedClient changefeedClient) {
-        this(containerClient, blobClient, changefeedClient, null);
+    public ChangeFeedHelper(BlobServiceClient blobServiceClient, BlobContainerClient containerClient,
+                            BlobClient blobClient, BlobChangefeedClient changefeedClient, boolean createAdditionalEvents) {
+        this(blobServiceClient, containerClient, blobClient, changefeedClient, createAdditionalEvents, null);
     }
 
-    public ChangeFeedHelper(BlobContainerClient containerClient, BlobClient blobClient, BlobChangefeedClient changefeedClient, String cursor) {
+    public ChangeFeedHelper(BlobServiceClient blobServiceClient, BlobContainerClient containerClient,
+                            BlobClient blobClient, BlobChangefeedClient changefeedClient, boolean createAdditionalEvents, String cursor) {
+        this.createAdditionalEvents = createAdditionalEvents;
+        this.serviceClient = blobServiceClient;
         this.containerClient = containerClient;
         this.blobClient = blobClient;
         this.changefeedClient = changefeedClient;
@@ -154,6 +159,9 @@ class ChangeFeedHelper extends TimerTask {
         // Stores cursor in storage account, in case if it needs to be used again later
         this.storeCursor();
         System.out.println("Stored cursor");
+        if (this.createAdditionalEvents) {
+            this.addMoreEvents();
+        }
     }
 
     /**
@@ -170,6 +178,24 @@ class ChangeFeedHelper extends TimerTask {
         ByteArrayInputStream dataStream = new ByteArrayInputStream(this.cursor.getBytes());
         blockBlobClient.upload(dataStream, this.cursor.length(), true);
     }
+
+    /**
+     * Creates additional events (optional if changefeed is to be run for a long time)
+     */
+    private void addMoreEvents() {
+        String eventsContainerName = "test-changefeed-container";
+        String blobName = "exampleBlob.txt";
+        String blobData = "Lorem ipsum";
+        BlobContainerClient eventsContainerClient = this.serviceClient.getBlobContainerClient(eventsContainerName);
+        if (!eventsContainerClient.exists()) {
+            eventsContainerClient.create();
+        }
+
+        // Creates new blob in same format found in exampleEventCreator. Blob's number starts at 10 to easily
+        // differentiate from blobs created earlier
+        BlockBlobClient blockBlobClient = eventsContainerClient.getBlobClient(this.blobNumber + blobName).getBlockBlobClient();
+        ByteArrayInputStream dataStream = new ByteArrayInputStream(blobData.getBytes());
+        blockBlobClient.upload(dataStream, blobData.length(), true);
+        this.blobNumber++;
+    }
 }
-
-
