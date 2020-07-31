@@ -131,22 +131,10 @@ class ChangeFeedHelper extends TimerTask {
         else {
             iterable = this.changefeedClient.getEvents(this.cursor);
         }
-//        Iterable<BlobChangefeedPagedResponse> pages = iterable.iterableByPage(1);
+
         Stream<BlobChangefeedPagedResponse> pages = iterable.streamByPage(1);
 
         System.out.println("Printing all events satisfying filters");
-        // Returning event info if event matches blob name
-//        for (BlobChangefeedPagedResponse page : pages) {
-//            List<BlobChangefeedEvent> iter = page.getValue();
-//            for (BlobChangefeedEvent event : iter) {
-//
-//                if (checkBlobName.and(checkContainerName).test(event)) {
-//                    // Prints out information about event
-//                    System.out.printf("Time: %s, Subject: %s, ID: %s, Type: %s%n", event.getEventTime(), event.getSubject(), event.getId(), event.getEventType());
-//                }
-//            }
-//            this.cursor = page.getContinuationToken();
-//        }
 
         // Checking by page every event and seeing if it satisfies filters. At the end, store the cursor in a blob
         pages.forEach(page -> {
@@ -161,8 +149,6 @@ class ChangeFeedHelper extends TimerTask {
                     this.cursor = page.getContinuationToken();
                 }
         );
-
-
 
         System.out.println("Printed all events satisfying filter since last check, storing cursor into storage account");
         // Stores cursor in storage account, in case if it needs to be used again later
