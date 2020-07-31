@@ -22,11 +22,13 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class ChangeFeedTimer {
     /**
      * Sets up a timer that checks for new events that are filtered based on preferences in TimerHelper. Saves cursor to
-     * blob for future use
+     * blob in given storage account for future use
      */
     public static void main(String[] args) throws IOException {
         String storingCursorContainer = "storingcursorcontainer";
@@ -123,7 +125,7 @@ class ChangeFeedHelper extends TimerTask {
         BlobChangefeedPagedIterable iterable = null;
 
         // Starting from cursor position if there exists one
-        if(this.cursor == null) {
+        if (this.cursor == null) {
             iterable = this.changefeedClient.getEvents();
         }
         else {
@@ -144,6 +146,7 @@ class ChangeFeedHelper extends TimerTask {
             }
             this.cursor = page.getContinuationToken();
         }
+
         System.out.println("Printed all events satisfying filter since last check, storing cursor into storage account");
         // Stores cursor in storage account, in case if it needs to be used again later
         this.storeCursor();
