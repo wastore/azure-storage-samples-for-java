@@ -22,8 +22,6 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 public class ChangeFeedTimer {
     /**
