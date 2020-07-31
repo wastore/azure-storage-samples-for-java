@@ -22,6 +22,9 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class ChangeFeedTimer {
     /**
@@ -51,7 +54,6 @@ public class ChangeFeedTimer {
         storageAccount = prop.getProperty("storageAccount");
 
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
-
 
         // Getting clients for accessing container and blob for storing cursor
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
@@ -129,21 +131,38 @@ class ChangeFeedHelper extends TimerTask {
         else {
             iterable = this.changefeedClient.getEvents(this.cursor);
         }
-        Iterable<BlobChangefeedPagedResponse> pages = iterable.iterableByPage(1);
+//        Iterable<BlobChangefeedPagedResponse> pages = iterable.iterableByPage(1);
+        Stream<BlobChangefeedPagedResponse> pages = iterable.streamByPage(1);
 
         System.out.println("Printing all events satisfying filters");
         // Returning event info if event matches blob name
-        for (BlobChangefeedPagedResponse page : pages) {
-            List<BlobChangefeedEvent> iter = page.getValue();
-            for (BlobChangefeedEvent event : iter) {
-                // TODO: Change predicate chain to desired chain to filter events
-                if (checkBlobName.and(checkContainerName).test(event)) {
-                    // Prints out information about event
-                    System.out.printf("Time: %s, Subject: %s, ID: %s, Type: %s%n", event.getEventTime(), event.getSubject(), event.getId(), event.getEventType());
+//        for (BlobChangefeedPagedResponse page : pages) {
+//            List<BlobChangefeedEvent> iter = page.getValue();
+//            for (BlobChangefeedEvent event : iter) {
+//
+//                if (checkBlobName.and(checkContainerName).test(event)) {
+//                    // Prints out information about event
+//                    System.out.printf("Time: %s, Subject: %s, ID: %s, Type: %s%n", event.getEventTime(), event.getSubject(), event.getId(), event.getEventType());
+//                }
+//            }
+//            this.cursor = page.getContinuationToken();
+//        }
+
+        // Checking by page every event and seeing if it satisfies filters. At the end, store the cursor in a blob
+        pages.forEach(page -> {
+                    page.getElements().stream()
+                            .filter(event ->
+                                    // TODO: Change predicate chain to desired chain to filter events
+                                    checkBlobName.and(checkContainerName).test(event))
+                            .forEach(event ->
+                                    // TODO: Change output as needed to see necessary information from event
+                                    System.out.printf("Time: %s, Subject: %s, ID: %s, Type: %s%n",
+                                            event.getEventTime(), event.getSubject(), event.getId(), event.getEventType()));
+                    this.cursor = page.getContinuationToken();
                 }
-            }
-            this.cursor = page.getContinuationToken();
-        }
+        );
+
+
 
         System.out.println("Printed all events satisfying filter since last check, storing cursor into storage account");
         // Stores cursor in storage account, in case if it needs to be used again later
