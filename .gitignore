@@ -1,0 +1,5 @@
+.idea/
+target/
+**/byteKeyInsecure.txt
+*.iml
+changeFeedSamples/
