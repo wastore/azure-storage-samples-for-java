@@ -47,8 +47,6 @@ public class ChangeFeedTimer {
         prop.load(input);
         String sharedKeyCred = prop.getProperty("sharedKeyCred");
         String storageAccount = prop.getProperty("storageAccount");
-        String createAdditionalEvents = prop.getProperty("createAdditionalEvents");
-        boolean createAdditionalEventsBool = Boolean.parseBoolean(createAdditionalEvents);
 
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
@@ -69,8 +67,7 @@ public class ChangeFeedTimer {
 
         // Create a Timer
         Timer timer = new Timer();
-        TimerTask task = new ChangeFeedHelper(blobServiceClient, blobContainerClient, blobClient, changefeedClient,
-                createAdditionalEventsBool, cursor);
+        TimerTask task = new ChangeFeedHelper(blobServiceClient, blobContainerClient, blobClient, changefeedClient, cursor);
 
         // Running on schedule
         timer.scheduleAtFixedRate(task, 0, interval);
@@ -96,8 +93,6 @@ class ChangeFeedHelper extends TimerTask {
     public BlobContainerClient containerClient;
     public BlobClient blobClient;
     public BlobChangefeedClient changefeedClient;
-    public boolean createAdditionalEvents;
-    private int blobNumber = 10;
 
     // Filtering
     String trackedContainer = "containers/test-changefeed-container";
@@ -108,13 +103,12 @@ class ChangeFeedHelper extends TimerTask {
     Predicate<BlobChangefeedEvent> checkEventType = (event) -> event.getEventType().toString().equals(eventType);
 
     public ChangeFeedHelper(BlobServiceClient blobServiceClient, BlobContainerClient containerClient,
-                            BlobClient blobClient, BlobChangefeedClient changefeedClient, boolean createAdditionalEvents) {
-        this(blobServiceClient, containerClient, blobClient, changefeedClient, createAdditionalEvents, null);
+                            BlobClient blobClient, BlobChangefeedClient changefeedClient) {
+        this(blobServiceClient, containerClient, blobClient, changefeedClient, null);
     }
 
     public ChangeFeedHelper(BlobServiceClient blobServiceClient, BlobContainerClient containerClient,
-                            BlobClient blobClient, BlobChangefeedClient changefeedClient, boolean createAdditionalEvents, String cursor) {
-        this.createAdditionalEvents = createAdditionalEvents;
+                            BlobClient blobClient, BlobChangefeedClient changefeedClient, String cursor) {
         this.serviceClient = blobServiceClient;
         this.containerClient = containerClient;
         this.blobClient = blobClient;
@@ -159,9 +153,6 @@ class ChangeFeedHelper extends TimerTask {
         // Stores cursor in storage account, in case if it needs to be used again later
         this.storeCursor();
         System.out.println("Stored cursor");
-        if (this.createAdditionalEvents) {
-            this.addMoreEvents();
-        }
     }
 
     /**
@@ -177,25 +168,5 @@ class ChangeFeedHelper extends TimerTask {
         BlockBlobClient blockBlobClient = this.blobClient.getBlockBlobClient();
         ByteArrayInputStream dataStream = new ByteArrayInputStream(this.cursor.getBytes());
         blockBlobClient.upload(dataStream, this.cursor.length(), true);
-    }
-
-    /**
-     * Creates additional events (optional if changefeed is to be run for a long time)
-     */
-    private void addMoreEvents() {
-        String eventsContainerName = "test-changefeed-container";
-        String blobName = "exampleBlob.txt";
-        String blobData = "Lorem ipsum";
-        BlobContainerClient eventsContainerClient = this.serviceClient.getBlobContainerClient(eventsContainerName);
-        if (!eventsContainerClient.exists()) {
-            eventsContainerClient.create();
-        }
-
-        // Creates new blob in same format found in exampleEventCreator. Blob's number starts at 10 to easily
-        // differentiate from blobs created earlier
-        BlockBlobClient blockBlobClient = eventsContainerClient.getBlobClient(this.blobNumber + blobName).getBlockBlobClient();
-        ByteArrayInputStream dataStream = new ByteArrayInputStream(blobData.getBytes());
-        blockBlobClient.upload(dataStream, blobData.length(), true);
-        this.blobNumber++;
     }
 }

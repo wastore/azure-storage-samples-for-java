@@ -13,14 +13,16 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class ExampleEventCreator {
     /**
      * Sets up example events to test changefeed with
      */
     public static void main(String[] args) throws IOException {
-        String sharedKeyCred = null;
-        String storageAccount = null;
+        // Delay between runs of adding new events
+        int interval = 3600000;
 
         Path currentPath = Paths.get(System.getProperty("user.dir"));
         Path pathToDir = Paths.get(currentPath.toString(), "changeFeedSamples",
@@ -31,16 +33,30 @@ public class ExampleEventCreator {
         InputStream input = new FileInputStream(configPath);
         Properties prop = new Properties();
         prop.load(input);
-        sharedKeyCred = prop.getProperty("sharedKeyCred");
-        storageAccount = prop.getProperty("storageAccount");
+        String sharedKeyCred = prop.getProperty("sharedKeyCred");
+        String storageAccount = prop.getProperty("storageAccount");
+        
+        // Create a Timer for creating events on a consistent interval
+        Timer timer = new Timer();
+        TimerTask task = new ExampleEventCreatorHelper(storageAccount, sharedKeyCred);
 
-        setup(storageAccount, sharedKeyCred);
+        // Running on schedule
+        timer.scheduleAtFixedRate(task, 0, interval);
+    }
+}
+
+class ExampleEventCreatorHelper extends TimerTask {
+    String storageAccount;
+    String sharedKeyCred;
+    int blobCount = 0;
+
+    public ExampleEventCreatorHelper(String storageAccount, String sharedKeyCred) {
+        this.storageAccount = storageAccount;
+        this.sharedKeyCred = sharedKeyCred;
     }
 
-    /**
-     * Sets up events by creating several blobs, then deletes a few.
-     */
-    public static void setup(String storageAccount, String sharedKeyCred) throws IOException{
+    // Creates a new blob every time timer is triggered with file name "#exampleBlob.txt" where # is an int.
+    public void run() {
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
         String containerName = "test-changefeed-container";
         String blobName = "exampleBlob.txt";
@@ -59,15 +75,11 @@ public class ExampleEventCreator {
             blobContainerClient.create();
         }
 
-        // Creating a few blobs to generate events
-        for (int i = 0; i < 5; i++) {
-            BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(i + blobName).getBlockBlobClient();
-            ByteArrayInputStream dataStream = new ByteArrayInputStream(blobData.getBytes());
-            blockBlobClient.upload(dataStream, blobData.length(), true);
-        }
-
-        // Deleting a blob for an event
-        blobContainerClient.getBlobClient(0 + blobName).delete();
-        blobContainerClient.getBlobClient(1 + blobName).delete();
+        // Generate blob as event
+        BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(this.blobCount + blobName).getBlockBlobClient();
+        ByteArrayInputStream dataStream = new ByteArrayInputStream(blobData.getBytes());
+        blockBlobClient.upload(dataStream, blobData.length(), true);
+        System.out.println("Generated blob called " + this.blobCount + blobName);
+        this.blobCount++;
     }
 }
