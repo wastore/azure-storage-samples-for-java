@@ -35,7 +35,6 @@ public class ChangeFeedTimer {
         // Delay between runs of timer. Currently set to an hour
         int interval = 3600000;
 
-
         Path currentPath = Paths.get(System.getProperty("user.dir"));
         Path pathToDir = Paths.get(currentPath.toString(), "changeFeedSamples",
                 "trackingChangesToBlobs", "src", "main", "java", "exampleEventCreator");
