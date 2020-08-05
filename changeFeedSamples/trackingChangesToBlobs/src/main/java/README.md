@@ -18,6 +18,8 @@ Requires modification of app.config file in exampleEventCreator folder. Must add
  * *storageAccount*
  
 The variable interval can be modified to change the delay between runs of the timer. It is currently set to an hour.
+The variables cursorStorageContainer and blobCursorName can also be modified to the name of the container and blob 
+respectively that contain the cursor. 
  
 #### Step-by-Step Instructions to Run Program
 1. Follow setup instructions above. Make sure all necessary installations are done and storage account is made

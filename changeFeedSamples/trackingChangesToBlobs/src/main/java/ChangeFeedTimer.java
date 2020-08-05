@@ -29,9 +29,6 @@ public class ChangeFeedTimer {
      * blob in given storage account for future use
      */
     public static void main(String[] args) throws IOException {
-        String storingCursorContainer = "storingcursorcontainer";
-        String blobCursorName = "storingcursorblob";
-
         Path currentPath = Paths.get(System.getProperty("user.dir"));
         Path pathToDir = Paths.get(currentPath.toString(), "changeFeedSamples",
                 "trackingChangesToBlobs", "src", "main", "java", "exampleEventCreator");
@@ -43,6 +40,8 @@ public class ChangeFeedTimer {
         prop.load(input);
         String sharedKeyCred = prop.getProperty("sharedKeyCred");
         String storageAccount = prop.getProperty("storageAccount");
+        String cursorStorageContainer = prop.getProperty("cursorStorageContainer");
+        String blobCursorName = prop.getProperty("blobCursorName");
         String intervalString = prop.getProperty("interval");
         int interval = Integer.parseInt(intervalString);
 
@@ -54,14 +53,14 @@ public class ChangeFeedTimer {
                 .credential(new StorageSharedKeyCredential(storageAccount, sharedKeyCred))
                 .buildClient();
 
-        BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(storingCursorContainer);
+        BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(cursorStorageContainer);
         BlobClient blobClient = blobContainerClient.getBlobClient(blobCursorName);
 
         // Creating changefeed client
         BlobChangefeedClient changefeedClient = new BlobChangefeedClientBuilder(blobServiceClient).buildClient();
 
         // Get previously used cursor
-        String cursor = getCursor(blobClient);
+        String cursor = getCursor(blobContainerClient, blobClient);
 
         // Create a Timer
         Timer timer = new Timer();
@@ -74,9 +73,9 @@ public class ChangeFeedTimer {
     /**
      * Retrieves cursor from container in case where cursor exists. If not, returns null
      */
-    public static String getCursor(BlobClient blobClient) {
+    public static String getCursor(BlobContainerClient blobContainerClient, BlobClient blobClient) {
         // Checking if blob exists to see if there is an existing cursor
-        if (blobClient.exists()) {
+        if (blobContainerClient.exists() && blobClient.exists()) {
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             blobClient.download(outputStream);
             return new String(outputStream.toByteArray());
