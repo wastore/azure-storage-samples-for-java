@@ -21,9 +21,6 @@ public class ExampleEventCreator {
      * Sets up example events to test changefeed with
      */
     public static void main(String[] args) throws IOException {
-        // Delay between runs of adding new events
-        int interval = 3600000;
-
         Path currentPath = Paths.get(System.getProperty("user.dir"));
         Path pathToDir = Paths.get(currentPath.toString(), "changeFeedSamples",
                 "trackingChangesToBlobs", "src", "main", "java", "exampleEventCreator");
@@ -35,6 +32,8 @@ public class ExampleEventCreator {
         prop.load(input);
         String sharedKeyCred = prop.getProperty("sharedKeyCred");
         String storageAccount = prop.getProperty("storageAccount");
+        String intervalString = prop.getProperty("interval");
+        int interval = Integer.parseInt(intervalString);
         
         // Create a Timer for creating events on a consistent interval
         Timer timer = new Timer();

@@ -17,6 +17,8 @@ Requires modification of app.config file in exampleEventCreator folder. Must add
  * *sharedKeyCred* (for storage account)
  * *storageAccount*
  
+The variable interval can be modified to change the delay between runs of the timer. It is currently set to an hour.
+ 
 #### Step-by-Step Instructions to Run Program
 1. Follow setup instructions above. Make sure all necessary installations are done and storage account is made
 2. Navigate to directory exampleEventCreator
@@ -27,5 +29,6 @@ Requires modification of app.config file in exampleEventCreator folder. Must add
 7. In IntelliJ, click on Run menu -> Edit Configurations
 8. In the right-hand pane, click "Allow parallel run" for both files that were just run. To navigate between files, 
 click on desired file's name in the left-pane. 
-9. Run ExampleEventCreator and Changefeed one after the other. They should run in parallel. Note that events in Changefeed
-may not be updated right away, so it may be necessary to wait an hour or more for changefeed to update. 
+9. Run ExampleEventCreator and Changefeed together (will require clicking run once for each file). They should run in
+parallel. Note that events in Changefeed may not be updated right away, so it may be necessary to wait an hour or 
+more for changefeed to update. 

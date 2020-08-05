@@ -32,9 +32,6 @@ public class ChangeFeedTimer {
         String storingCursorContainer = "storingcursorcontainer";
         String blobCursorName = "storingcursorblob";
 
-        // Delay between runs of timer. Currently set to an hour
-        int interval = 3600000;
-
         Path currentPath = Paths.get(System.getProperty("user.dir"));
         Path pathToDir = Paths.get(currentPath.toString(), "changeFeedSamples",
                 "trackingChangesToBlobs", "src", "main", "java", "exampleEventCreator");
@@ -46,6 +43,8 @@ public class ChangeFeedTimer {
         prop.load(input);
         String sharedKeyCred = prop.getProperty("sharedKeyCred");
         String storageAccount = prop.getProperty("storageAccount");
+        String intervalString = prop.getProperty("interval");
+        int interval = Integer.parseInt(intervalString);
 
         String storageAccountUrl = "https://" + storageAccount + ".blob.core.windows.net";
 
@@ -122,7 +121,8 @@ class ChangeFeedHelper extends TimerTask {
     public void run() {
         BlobChangefeedPagedIterable iterable = null;
 
-        // Starting from cursor position if there exists one
+        // Starting from cursor position if there exists one. If there is no cursor, outputs of events start from
+        // beginning of time
         if (this.cursor == null) {
             iterable = this.changefeedClient.getEvents();
         }
