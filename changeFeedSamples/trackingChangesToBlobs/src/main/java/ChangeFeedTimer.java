@@ -129,7 +129,7 @@ class ChangeFeedHelper extends TimerTask {
             iterable = this.changefeedClient.getEvents(this.cursor);
         }
 
-        Stream<BlobChangefeedPagedResponse> pages = iterable.streamByPage(1);
+        Stream<BlobChangefeedPagedResponse> pages = iterable.streamByPage();
 
         System.out.println("Printing all events satisfying filters");
 
