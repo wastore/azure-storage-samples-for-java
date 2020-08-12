@@ -61,21 +61,21 @@ public class objectReplicationMonitor {
         }
 
         // Call method to setup blob in source container
-        SetupSource(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
+        setupSource(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
 
         // Call method to check the replication status of the blob in source container
         System.out.println("\nOnce the replication process begins, the replication status will output...");
-        List<String> completedEventsList = CheckReplication(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
+        List<String> completedEventsList = checkReplication(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
 
         // Call method to check the contents of a replicated blob
-        CheckContents(sourceStorageAccountConnectionString, sourceContainerName, destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
+        checkContents(sourceStorageAccountConnectionString, sourceContainerName, destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
 
         // Call method to archive replicated blobs
         if (archiveMethod.equals("batch")) {
-            ArchiveReplicatedDataWithBatch(destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
+            archiveReplicatedDataWithBatch(destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
         }
         else if (archiveMethod.equals("individual")) {
-            ArchiveReplicatedDataIndividually(destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
+            archiveReplicatedDataIndividually(destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
         }
         else {
             System.out.println("\nNo archive method selected");
@@ -83,7 +83,7 @@ public class objectReplicationMonitor {
     }
 
 
-    private static void SetupSource(String connectionString, String containerName, String[] blobList) {
+    private static void setupSource(String connectionString, String containerName, String[] blobList) {
         /*
         This method is to upload the blobs to the source container
          */
@@ -112,7 +112,7 @@ public class objectReplicationMonitor {
     }
 
 
-    private static List<String> CheckReplication(String connectionString, String containerName, String[] blobList) {
+    private static List<String> checkReplication(String connectionString, String containerName, String[] blobList) {
         /*
         This method is to check the replication status of the blobs.
          */
@@ -191,7 +191,7 @@ public class objectReplicationMonitor {
     }
 
 
-    private static void CheckContents(String sourceConnectionString, String sourceContainer, String destinationConnectionString, String destinationContainer, List<String> blobList) throws FileNotFoundException {
+    private static void checkContents(String sourceConnectionString, String sourceContainer, String destinationConnectionString, String destinationContainer, List<String> blobList) throws FileNotFoundException {
         /*
         This method is to check that the contents of a replicated blob transferred correctly
          */
@@ -231,7 +231,7 @@ public class objectReplicationMonitor {
     }
 
 
-    private static void ArchiveReplicatedDataWithBatch(String destinationConnectionString, String destinationContainer, List<String> blobList) {
+    private static void archiveReplicatedDataWithBatch(String destinationConnectionString, String destinationContainer, List<String> blobList) {
         /*
         This method is to archive the replicated blobs with batch
          */
@@ -270,7 +270,7 @@ public class objectReplicationMonitor {
     }
 
 
-    private static void ArchiveReplicatedDataIndividually(String destinationConnectionString, String destinationContainer, List<String> blobList) {
+    private static void archiveReplicatedDataIndividually(String destinationConnectionString, String destinationContainer, List<String> blobList) {
         /*
         This is to archive the data without batch
          */
