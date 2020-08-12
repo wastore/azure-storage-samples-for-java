@@ -24,7 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 
-public class objectReplicationMonitor {
+public class ObjectReplicationMonitor {
     /*
     This class is to demonstrate what object replication does. please read the README in its entirety
     before running this program and make sure all prerequisites are met.
@@ -47,7 +47,7 @@ public class objectReplicationMonitor {
         String sourceStorageAccountConnectionString = prop.getProperty("sourceStorageAccountConnectionString");
         String destinationContainerName = prop.getProperty("destinationContainerName");
         String destinationStorageAccountConnectionString = prop.getProperty("destinationStorageAccountConnectionString");
-        String blobsToReplicate = prop.getProperty("blobsToReplicate");
+        String blobsToReplicatePrefix = prop.getProperty("blobsToReplicatePrefix");
         String archiveMethod = prop.getProperty("archiveMethod");
 
         // Creating a sample list of blobs to upload and replicate
@@ -55,7 +55,7 @@ public class objectReplicationMonitor {
         int num = 0;
         for (int i = 0; i < replicatedBlobList.length; i++) {
 
-            replicatedBlobList[i] = blobsToReplicate + num;
+            replicatedBlobList[i] = blobsToReplicatePrefix + num;
             num++;
 
         }
@@ -247,8 +247,8 @@ public class objectReplicationMonitor {
 
         // Get all blobs in container's urls and add them to a list
         List<String> blobUrls = new ArrayList<>();
-        for (Object b : blobList) {
-            String url = blobServiceClient.getBlobContainerClient(destinationContainer).getBlobClient((String) b).getBlobUrl();
+        for (String b : blobList) {
+            String url = blobServiceClient.getBlobContainerClient(destinationContainer).getBlobClient(b).getBlobUrl();
             blobUrls.add(url);
         }
 
@@ -288,9 +288,9 @@ public class objectReplicationMonitor {
         }
 
         // Iterate through list of blobs
-        for (Object b : blobList) {
+        for (String b : blobList) {
             // Get blob client and archive that blob
-            BlobClient blobClient = sourceContainerClient.getBlobClient((String) b);
+            BlobClient blobClient = sourceContainerClient.getBlobClient(b);
             blobClient.setAccessTier(AccessTier.ARCHIVE);
         }
     }

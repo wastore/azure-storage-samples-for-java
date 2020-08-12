@@ -28,11 +28,12 @@ Follow the instructions in the links under "Getting Started" if you do not alrea
 
 Go Through the app.config file and make any necessary changes
 
-Run the file objectReplicationMonitor.java to get a demonstration. This demo will upload blobs
-to the source container and output the properties and content of those blobs. Then, the program may pause for 
-a few minutes to allow for the replication to process. Finally, the program will locate the blobs that have been
-replicated into the destination container and output those blobs' properties and content to show that the
-blobs correctly replicated from the source container to the destination container.
+Run the file ObjectReplicationMonitor.java to get a demonstration. This demo will upload blobs to the source container. 
+Then, the program may pause for a few minutes to allow for the replication to process. Finally, the program will locate 
+the blobs that have been replicated into the destination container and output those blobs' properties that check for 
+successful replication. This will output a percentage status to track how many blobs have successfully replicated.
+Then one blob pair from the source and destination container's contents will be printed to ensure that the blobs 
+correctly replicated from the source container to the destination container.
 
 ###Issues with Archiving
 This program has two different implementations of archiving replicated blobs: using batch or archiving individually.
