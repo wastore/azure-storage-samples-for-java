@@ -1,10 +1,9 @@
-import com.azure.storage.blob.BlobClient;
-import com.azure.storage.blob.BlobContainerClient;
-import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.BlobServiceClientBuilder;
-import com.azure.storage.blob.models.BlobProperties;
-import com.azure.storage.blob.models.ObjectReplicationPolicy;
-import com.azure.storage.blob.models.ObjectReplicationRule;
+import com.azure.storage.blob.*;
+import com.azure.storage.blob.batch.BlobBatchClient;
+import com.azure.storage.blob.batch.BlobBatchClientBuilder;
+import com.azure.storage.blob.batch.BlobBatchStorageException;
+import com.azure.storage.blob.models.*;
+
 import java.util.*;
 import java.io.*;
 import java.nio.file.Path;
@@ -36,10 +35,15 @@ public class objectReplicationMonitor {
         String destinationStorageAccountConnectionString = prop.getProperty("destinationStorageAccountConnectionString");
         String blobsToReplicate = prop.getProperty("blobsToReplicate");
 
-        String[] replicatedBlobList = blobsToReplicate.split(", ");
+        // creating a sample list of blobs to upload and replicate
+        String[] replicatedBlobList = new String[1000];
+        int num = 1;
+        for (int i = 0; i < 1000; i++) {
 
-        // sample of replication status
-        System.out.println("\nThis is an example of using ORS...");
+            replicatedBlobList[i] = blobsToReplicate + num;
+            num++;
+
+        }
 
         // call method to setup blob in source container
         setupSource(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
@@ -47,19 +51,25 @@ public class objectReplicationMonitor {
         // call method to check the replication status of the blob in source container
         System.out.println("\nReplicating blobs to destination container...");
         System.out.println("Once the replication process begins, the replication status will output...");
-        checkReplication(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
+        boolean status = checkReplication(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
 
-        // call method to check the contents of a replicated blob
-        checkContents(sourceStorageAccountConnectionString, sourceContainerName, destinationStorageAccountConnectionString, destinationContainerName, replicatedBlobList);
+        // if checkReplication() completed replication, these methods will be called
+        if (status) {
+            // call method to check the contents of a replicated blob
+            checkContents(sourceStorageAccountConnectionString, sourceContainerName, destinationStorageAccountConnectionString, destinationContainerName, replicatedBlobList);
 
-        // call method to archive replicated blobs
-        archiveReplicatedData(destinationStorageAccountConnectionString, destinationContainerName, replicatedBlobList);
+            // call method to archive replicated blobs
+            archiveReplicatedData(destinationStorageAccountConnectionString, destinationContainerName, replicatedBlobList);
+
+        }
 
     }
 
 
     private static void setupSource(String connectionString, String containerName, String[] blobList) {
-        // this method is to upload a blob to the source container
+        /*
+        this method is to upload the blobs to the source container
+         */
 
         System.out.println("\nUploading blobs to the source container...");
 
@@ -69,7 +79,9 @@ public class objectReplicationMonitor {
         // get the container client
         BlobContainerClient sourceContainerClient = sourceBlobServiceClient.getBlobContainerClient(containerName);
         if (!sourceContainerClient.exists()) {
+
             sourceContainerClient.create();
+
         }
 
         // iterate through list of blobs
@@ -88,8 +100,12 @@ public class objectReplicationMonitor {
     }
 
 
-    private static void checkReplication(String connectionString, String containerName, String[] blobList) {
-        // this method is to check the replication status and the contents of the blob
+    private static boolean checkReplication(String connectionString, String containerName, String[] blobList) {
+        /*
+        this method is to check the replication status and the contents of the blob
+        it returns a boolean to represent whether or not the replication was completed
+        if it was not completed, false will be returned. if it is completed, true will return
+         */
 
         // creating blobserviceclient to access containerclient
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(connectionString).buildClient();
@@ -97,36 +113,52 @@ public class objectReplicationMonitor {
         // get the container client to access blob client
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
+        // variables to keep track of and represent how many blobs have replicated
         int completed = 0;
         double ratio = 0;
+        int percentage = (int) (ratio * 100);
         int size = blobList.length;
         ArrayList completedEvents = new ArrayList();
 
-        // while loop for continuous updating on replication status
+        System.out.println("Please wait for replication to begin...");
+
+        // while loop for continuous updating on replication status until all blobs have replicated
         while (completed < size) {
 
-            // iterate through list of blobs
+            // iterate through list of all blobs
             for (String b : blobList) {
 
-                // check if event has already been completed
+                // check if event has already been completed, as to only check status of unreplicated blobs
                 if (!completedEvents.contains(b)) {
+
                     // get blob client to access blob
                     BlobClient blobClient = blobContainerClient.getBlobClient(b);
 
                     // get properties of blob
                     BlobProperties properties = blobClient.getProperties();
-
                     List<ObjectReplicationPolicy> propertyList = properties.getObjectReplicationSourcePolicies();
 
                     // find replication policy status
                     for (ObjectReplicationPolicy policy : propertyList) {
+
                         for (ObjectReplicationRule rule : policy.getRules()) {
 
                             // track how many replications have completed
                             String status = rule.getStatus().toString();
+
+                            // if the replication was completed, add 1 to variable completed and add that blob to the completedEvents list
                             if (status.equals("complete")) {
+
                                 completed++;
                                 completedEvents.add(b);
+
+                            }
+
+                            // if the replication was failed, return false
+                            else if (status.equals("failed")) {
+
+                                System.out.println("\nReplication has failed. Please check that blobs in destination container are not archived...");
+                                return false;
 
                             }
 
@@ -136,14 +168,17 @@ public class objectReplicationMonitor {
 
                 }
 
-                // if status has new value
-                if((double)completed/(double)size != ratio) {
+                // check if status has a new value and percentage, to avoid repeat printing the same status
+                if((double)completed/(double)size != ratio && (int)(((double)completed/(double)size) * 100) != percentage) {
+
                     ratio = (double)completed/(double)size;
+                    percentage = (int)(ratio * 100);
+
                     // output completion status as a percentage
-                    System.out.println("\nReplication completion is at " + ((int)(ratio * 100)) + "%...");
+                    System.out.println("\nReplication completion is at " + percentage + "%...");
                     System.out.println(completed + " out of " + size + " blobs have successfully replicated...");
 
-                    // check for completion
+                    // check for completion of all blobs, this will also cause end of while loop
                     if (ratio == 1) {
                         System.out.println("\nCompleted!");
                         break;
@@ -156,16 +191,22 @@ public class objectReplicationMonitor {
 
         }
 
+        // if replication was completed for all blobs return true
+        return true;
+
     }
 
 
     private static void checkContents(String sourceConnectionString, String sourceContainer, String destinationConnectionString, String destinationContainer, String[] blobList) throws FileNotFoundException {
-        // this method is to check that the contents of a replicated blob transferred correctly
+        /*
+        this method is to check that the contents of a replicated blob transferred correctly
+         */
 
         String[] connectionString = {sourceConnectionString, destinationConnectionString};
         String[] containerName = {sourceContainer, destinationContainer};
 
         for (int s = 0; s < connectionString.length; s++) {
+
             // creating blobserviceclient to access containerclient
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(connectionString[s]).buildClient();
 
@@ -186,35 +227,67 @@ public class objectReplicationMonitor {
             // read content of file
             Scanner fileReader = new Scanner(localFile);
             while (fileReader.hasNextLine()) {
+
                 String content = fileReader.nextLine();
                 System.out.println(content);
+
             }
+
             fileReader.close();
 
-            // delete content file
-            localFile.delete();
+            // delete content file-- clean up
+            localFile.deleteOnExit();
         }
 
     }
 
 
-    private static void archiveReplicatedData(String destinationConnectionString, String destinationContainer, String[] blobList) throws IOException {
-        // this method is to archive the replicated blobs
+    private static void archiveReplicatedData(String destinationConnectionString, String destinationContainer, String[] blobList) {
+        /*
+        this method is to archive the replicated blobs
+         */
 
         System.out.println("\nTransferring replicated blobs in destination container to archive tier...");
+        System.out.println("This may take a few minutes...");
 
-        for(String b : blobList) {
+        // get blobServiceClient to create batch client
+        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(destinationConnectionString).buildClient();
 
-            Process p = null;
+        // create a batch client that can be used to archive multiple blobs
+        BlobBatchClient blobBatchClient = new BlobBatchClientBuilder(blobServiceClient).buildClient();
 
-            // transferring blobs to archive
-            p = new ProcessBuilder("cmd.exe", "/c", "az storage blob set-tier --connection-string " + destinationConnectionString + " --container-name " + destinationContainer + " --name " + b + " --tier Archive").start();
-            // Reading outputs from command line
-            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            while ((r.readLine()) != null) {}
+        // get all blobs in container's urls and add them to a list
+        List<String> blobUrls = new ArrayList<>();
+
+        for (String b : blobList) {
+
+            String url = blobServiceClient.getBlobContainerClient(destinationContainer).getBlobClient(b).getBlobUrl();
+            blobUrls.add(url);
+
+        }
+
+        // set the access tier of the batch to Archive with try/catch
+        try {
+
+            blobBatchClient.setBlobsAccessTier(blobUrls, AccessTier.ARCHIVE).forEach(response ->
+                    System.out.printf("Setting blob access tier with URL %s completed with status code %d%n",
+                            response.getRequest().getUrl(), response.getStatusCode()));
+
+        }
+
+        catch(BlobBatchStorageException ex) {
+
+            for (BlobStorageException e : ex.getBatchExceptions()) {
+
+                String message = e.getServiceMessage();
+                System.out.println(message);
+
+            }
+
         }
 
         System.out.println("\nArchived replicated blobs!");
+
     }
 
 }
