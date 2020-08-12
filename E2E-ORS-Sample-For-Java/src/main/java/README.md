@@ -33,3 +33,18 @@ to the source container and output the properties and content of that blob. Then
 5 minutes to allow for the replication to process. Finally, the program will locate the blob that has been
 replicated into the destination container and output that blob's properties and content to show that the
 blob correctly replicated from the source container to the destination container.
+
+###Issues with Archiving
+This program has two different implementations of archiving replicated blobs: using batch or archiving individually.
+To choose which implementation you would like to use, set archiveMethod in app.config to "batch" or "individual".
+#####Using Batch to Archive
+Currently, there are issues with using batch to archive. In order to navigate these issues, follow these steps:
+1. Access the storage account that contains the blobs you want to archive
+2. Navigate to Configuration
+3. Disable "Secure Transfer Required"
+4. When adding this storage account's connection string to the config.app, change "https" to "https" in the connection string
+5. Set archiveMethod in app.config to "batch"
+[here is the reported issue](https://github.com/Azure/azure-sdk-for-net/issues/13524)
+#####Archiving Blobs Individually
+If you do not want to use batch, the other option is to archive each blob individually. All that is required is to set
+archiveMethod in app.config to "individual".
