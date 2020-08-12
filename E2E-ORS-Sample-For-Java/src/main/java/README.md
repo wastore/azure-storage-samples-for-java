@@ -3,7 +3,7 @@
 The purpose of this sample is to demonstrate what object replication does.
 
 ###Getting started
-Currently, creating object Replication is unavailable in command line. If you have not yet set up object replication,
+Currently, creating object replication is unavailable in command line. If you have not yet set up object replication,
 please follow the instructions in the links below, using Azure portal when possible.
 
 To register for preview:
@@ -28,7 +28,7 @@ Follow the instructions in the links under "Getting Started" if you do not alrea
 
 Go Through the app.config file and make any necessary changes
 
-Run the file objectReplicationMonitor.java to get a demonstration. This demo will upload a blob
+Run the file objectReplicationMonitor.java to get a demonstration. This demo will upload blobs
 to the source container and output the properties and content of that blob. Then, the program will pause for 
 5 minutes to allow for the replication to process. Finally, the program will locate the blob that has been
 replicated into the destination container and output that blob's properties and content to show that the
@@ -42,7 +42,7 @@ Currently, there are issues with using batch to archive. In order to navigate th
 1. Access the storage account that contains the blobs you want to archive
 2. Navigate to Configuration
 3. Disable "Secure Transfer Required"
-4. When adding this storage account's connection string to the config.app, change "https" to "https" in the connection string
+4. When adding this storage account's connection string to the config.app, change "https" to "http" in the connection string
 5. Set archiveMethod in app.config to "batch"
 [here is the reported issue](https://github.com/Azure/azure-sdk-for-net/issues/13524)
 #####Archiving Blobs Individually

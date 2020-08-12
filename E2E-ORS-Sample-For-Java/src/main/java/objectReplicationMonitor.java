@@ -1,30 +1,44 @@
-import com.azure.storage.blob.*;
+import com.azure.storage.blob.BlobServiceClient;
+import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.BlobContainerClient;
+import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.batch.BlobBatchClient;
 import com.azure.storage.blob.batch.BlobBatchClientBuilder;
 import com.azure.storage.blob.batch.BlobBatchStorageException;
-import com.azure.storage.blob.models.*;
-
-import java.util.*;
-import java.io.*;
+import com.azure.storage.blob.models.BlobProperties;
+import com.azure.storage.blob.models.ObjectReplicationPolicy;
+import com.azure.storage.blob.models.ObjectReplicationRule;
+import com.azure.storage.blob.models.AccessTier;
+import com.azure.storage.blob.models.BlobStorageException;
+import java.util.Properties;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+import java.io.InputStream;
+import java.io.IOException;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 
 public class objectReplicationMonitor {
     /*
-    this class is to demonstrate what object replication does. please read the README in its entirety
+    This class is to demonstrate what object replication does. please read the README in its entirety
     before running this program and make sure all prerequisites are met.
      */
 
     public static void main(String[] args) throws IOException {
 
-        // get path to config file
+        // Get path to config file
         Path currentPath = Paths.get(System.getProperty("user.dir"));
         Path pathToDir = Paths.get(currentPath.toString(),
                 "src", "main", "java");
         String pathToConfig = Paths.get(pathToDir.toString(), "app.config").toString();
 
-        // get values from config files
+        // Get values from config files
         InputStream input = new FileInputStream(pathToConfig);
         Properties prop = new Properties();
         prop.load(input);
@@ -36,8 +50,8 @@ public class objectReplicationMonitor {
         String blobsToReplicate = prop.getProperty("blobsToReplicate");
         String archiveMethod = prop.getProperty("archiveMethod");
 
-        // creating a sample list of blobs to upload and replicate
-        String[] replicatedBlobList = new String[1000];
+        // Creating a sample list of blobs to upload and replicate
+        String[] replicatedBlobList = new String[250];
         int num = 0;
         for (int i = 0; i < replicatedBlobList.length; i++) {
 
@@ -46,284 +60,238 @@ public class objectReplicationMonitor {
 
         }
 
-        // call method to setup blob in source container
-        setupSource(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
+        // Call method to setup blob in source container
+        SetupSource(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
 
-        // call method to check the replication status of the blob in source container
+        // Call method to check the replication status of the blob in source container
         System.out.println("\nOnce the replication process begins, the replication status will output...");
-        ArrayList completedEventsList = checkReplication(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
+        List<String> completedEventsList = CheckReplication(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
 
-        // call method to check the contents of a replicated blob
-        checkContents(sourceStorageAccountConnectionString, sourceContainerName, destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
+        // Call method to check the contents of a replicated blob
+        CheckContents(sourceStorageAccountConnectionString, sourceContainerName, destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
 
-        // call method to archive replicated blobs
+        // Call method to archive replicated blobs
         if (archiveMethod.equals("batch")) {
-
-            archiveReplicatedDataWithBatch(destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
-
+            ArchiveReplicatedDataWithBatch(destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
         }
-
         else if (archiveMethod.equals("individual")) {
-
-            archiveReplicatedDataIndividually(destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
-
+            ArchiveReplicatedDataIndividually(destinationStorageAccountConnectionString, destinationContainerName, completedEventsList);
         }
-
         else {
-
             System.out.println("\nNo archive method selected");
-
         }
-
     }
 
 
-    private static void setupSource(String connectionString, String containerName, String[] blobList) {
+    private static void SetupSource(String connectionString, String containerName, String[] blobList) {
         /*
-        this method is to upload the blobs to the source container
+        This method is to upload the blobs to the source container
          */
 
         System.out.println("\nUploading blobs to the source container...");
 
-        // creating blobserviceclient in order to make containerclient
+        // Creating blobserviceclient in order to make containerclient
         BlobServiceClient sourceBlobServiceClient = new BlobServiceClientBuilder().connectionString(connectionString).buildClient();
 
-        // get the container client
+        // Get the container client
         BlobContainerClient sourceContainerClient = sourceBlobServiceClient.getBlobContainerClient(containerName);
         if (!sourceContainerClient.exists()) {
-
             sourceContainerClient.create();
-
         }
 
-        // iterate through list of blobs
+        // Iterate through list of blobs
         for (String b : blobList) {
-
-            // get blob client
+            // Get blob client
             BlobClient sourceBlobClient = sourceContainerClient.getBlobClient(b);
 
-            // upload the blob
+            // Upload the blob
             String content = "Hello World!";
             ByteArrayInputStream dataStream = new ByteArrayInputStream(content.getBytes());
             sourceBlobClient.upload(dataStream, content.length(), true);
-
         }
-
     }
 
 
-    private static ArrayList checkReplication(String connectionString, String containerName, String[] blobList) {
+    private static List<String> CheckReplication(String connectionString, String containerName, String[] blobList) {
         /*
-        this method is to check the replication status and the contents of the blob
-        it returns a boolean to represent whether or not the replication was completed
-        if it was not completed, false will be returned. if it is completed, true will return
+        This method is to check the replication status of the blobs.
          */
 
-        // creating blobserviceclient to access containerclient
+        // Creating blobserviceclient to access containerclient
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(connectionString).buildClient();
 
-        // get the container client to access blob client
+        // Get the container client to access blob client
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName);
 
-        // variables to keep track of and represent how many blobs have replicated
+        // Variables to keep track of and represent how many blobs have replicated
         int completed = 0;
         double ratio = 0;
         int percentage = (int) (ratio * 100);
         int size = blobList.length;
-        ArrayList completedEvents = new ArrayList();
-        ArrayList failedEvents = new ArrayList();
+        ArrayList<String> completedEvents = new ArrayList<>();
+        ArrayList<String> failedEvents = new ArrayList<>();
 
-        // while loop for continuous updating on replication status until all blobs have replicated
+        // While loop for continuous updating on replication status until all blobs have replicated
         while (completed < size) {
 
-            // iterate through list of all blobs
+            // Iterate through list of all blobs
             for (String b : blobList) {
 
-                // check if event has already been completed, as to only check status of unreplicated blobs
+                // Check if event has already been completed, as to only check status of unreplicated blobs
                 if (!completedEvents.contains(b) && !failedEvents.contains(b)) {
 
-                    // get blob client to access blob
+                    // Get blob client to access blob
                     BlobClient blobClient = blobContainerClient.getBlobClient(b);
 
-                    // get properties of blob
+                    // Get properties of blob
                     BlobProperties properties = blobClient.getProperties();
                     List<ObjectReplicationPolicy> propertyList = properties.getObjectReplicationSourcePolicies();
 
-                    // find replication policy status
+                    // Find replication policy status
                     for (ObjectReplicationPolicy policy : propertyList) {
-
                         for (ObjectReplicationRule rule : policy.getRules()) {
 
-                            // track how many replications have completed
+                            // Track how many replications have completed
                             String status = rule.getStatus().toString();
 
-                            // if the replication was completed, add 1 to variable completed and add that blob to the failedEvents list
+                            // If the replication was completed, add 1 to variable completed and add that blob to the failedEvents list
                             if (status.equals("complete")) {
-
                                 completed++;
                                 completedEvents.add(b);
-
                             }
 
-                            // if the replication was failed on a specific blob, alert user and continue checking replication of other blobs
+                            // If the replication was failed on a specific blob, alert user and continue checking replication of other blobs
                             else if (status.equals("failed")) {
-
                                 System.out.println("\nReplication of " + b + " has failed. Please check that " + b + " in destination container are not archived...");
                                 failedEvents.add(b);
                                 size--;
-
                             }
-
                         }
-
                     }
-
                 }
 
-                // check if status has a new value and percentage, to avoid repeat printing the same status
+                // Check if status has a new value and percentage, to avoid repeat printing the same status
                 if ((double) completed / (double) size != ratio && (int) (((double) completed / (double) size) * 100) != percentage) {
-
                     ratio = (double) completed / (double) size;
                     percentage = (int) (ratio * 100);
 
-                    // output completion status as a percentage
+                    // Output completion status as a percentage
                     System.out.println("\nReplication completion is at " + percentage + "%...");
                     System.out.println(completed + " out of " + size + " blobs have successfully replicated...");
 
-                    // check for completion of all blobs, this will also cause end of while loop
+                    // Check for completion of all blobs, this will also cause end of while loop
                     if (ratio == 1) {
                         System.out.println("\nCompleted!");
                         break;
-
                     }
-
                 }
-
             }
-
         }
-
         return completedEvents;
-
     }
 
 
-    private static void checkContents(String sourceConnectionString, String sourceContainer, String destinationConnectionString, String destinationContainer, ArrayList blobList) throws FileNotFoundException {
+    private static void CheckContents(String sourceConnectionString, String sourceContainer, String destinationConnectionString, String destinationContainer, List<String> blobList) throws FileNotFoundException {
         /*
-        this method is to check that the contents of a replicated blob transferred correctly
+        This method is to check that the contents of a replicated blob transferred correctly
          */
 
         String[] connectionString = {sourceConnectionString, destinationConnectionString};
         String[] containerName = {sourceContainer, destinationContainer};
-
         for (int s = 0; s < connectionString.length; s++) {
 
-            // creating blobserviceclient to access containerclient
+            // Creating blobserviceclient to access containerclient
             BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(connectionString[s]).buildClient();
 
-            // get the container client to access blob client
+            // Get the container client to access blob client
             BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(containerName[s]);
 
-            // print out contents of one blob to show successful replication
-            BlobClient blobClient = blobContainerClient.getBlobClient((String) blobList.get(0));
+            // Print out contents of one blob to show successful replication
+            BlobClient blobClient = blobContainerClient.getBlobClient(blobList.get(0));
 
             System.out.println("\nContent of " + blobList.get(0) + " in the " + containerName[s] + " container:");
 
-            // create local file to store contents
+            // Create local file to store contents
             File localFile = new File("src/main/java/replicated_blob_content.txt");
 
-            // download blob content to file
+            // Download blob content to file
             blobClient.downloadToFile("src/main/java/replicated_blob_content.txt", true);
 
-            // read content of file
+            // Read content of file
             Scanner fileReader = new Scanner(localFile);
             while (fileReader.hasNextLine()) {
-
                 String content = fileReader.nextLine();
                 System.out.println(content);
-
             }
-
             fileReader.close();
 
-            // delete content file-- clean up
+            // Delete content file-- clean up
             localFile.deleteOnExit();
         }
-
     }
 
 
-    private static void archiveReplicatedDataWithBatch(String destinationConnectionString, String destinationContainer, ArrayList blobList) {
+    private static void ArchiveReplicatedDataWithBatch(String destinationConnectionString, String destinationContainer, List<String> blobList) {
         /*
-        this method is to archive the replicated blobs with batch
+        This method is to archive the replicated blobs with batch
          */
 
         System.out.println("\nTransferring replicated blobs in destination container to archive tier...");
         System.out.println("This may take a few minutes...");
 
-        // get blobServiceClient to create batch client
+        // Get blobServiceClient to create batch client
         BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(destinationConnectionString).buildClient();
 
-        // create a batch client that can be used to archive multiple blobs
+        // Create a batch client that can be used to archive multiple blobs
         BlobBatchClient blobBatchClient = new BlobBatchClientBuilder(blobServiceClient).buildClient();
 
-        // get all blobs in container's urls and add them to a list
+        // Get all blobs in container's urls and add them to a list
         List<String> blobUrls = new ArrayList<>();
-
         for (Object b : blobList) {
-
             String url = blobServiceClient.getBlobContainerClient(destinationContainer).getBlobClient((String) b).getBlobUrl();
             blobUrls.add(url);
-
         }
 
-        // set the access tier of the batch to Archive with try/catch
+        // Set the access tier of the batch to Archive with try/catch
         try {
-
             blobBatchClient.setBlobsAccessTier(blobUrls, AccessTier.ARCHIVE).forEach(response ->
                     System.out.printf("Setting blob access tier with URL %s completed with status code %d%n",
                             response.getRequest().getUrl(), response.getStatusCode()));
 
             System.out.println("\nArchived replicated blobs!");
-
         }
-
         catch (BlobBatchStorageException ex) {
-
+            System.out.println("\nThis error may have to do with TLS. Please ensure that you are using 'https' in your connection string rather than 'https', and that 'Secure Transfer' is disabled in your storage account. See README.md for more help.");
             for (BlobStorageException e : ex.getBatchExceptions()) {
-
                 String message = e.getServiceMessage();
                 System.out.println(message);
-
-                break;
-
             }
-
         }
-
     }
 
 
-    private static void archiveReplicatedDataIndividually(String destinationConnectionString, String destinationContainer, ArrayList blobList) throws IOException {
+    private static void ArchiveReplicatedDataIndividually(String destinationConnectionString, String destinationContainer, List<String> blobList) {
         /*
-        this is to archive the data without batch
+        This is to archive the data without batch
          */
 
         System.out.println("\nTransferring replicated blobs in destination container to archive tier...");
         System.out.println("This may take a few minutes...");
 
-        for(Object b : blobList) {
+        // Creating blobserviceclient in order to make containerclient
+        BlobServiceClient sourceBlobServiceClient = new BlobServiceClientBuilder().connectionString(destinationConnectionString).buildClient();
 
-            Process p = null;
-
-            // transferring blobs to archive
-            p = new ProcessBuilder("cmd.exe", "/c", "az storage blob set-tier --connection-string " + destinationConnectionString + " --container-name " + destinationContainer + " --name " + b + " --tier Archive").start();
-            // reading outputs from command line
-            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            while ((r.readLine()) != null) {}
-
+        // Get the container client
+        BlobContainerClient sourceContainerClient = sourceBlobServiceClient.getBlobContainerClient(destinationContainer);
+        if (!sourceContainerClient.exists()) {
+            sourceContainerClient.create();
         }
 
+        // Iterate through list of blobs
+        for (Object b : blobList) {
+            // Get blob client and archive that blob
+            BlobClient blobClient = sourceContainerClient.getBlobClient((String) b);
+            blobClient.setAccessTier(AccessTier.ARCHIVE);
+        }
     }
-
 }
