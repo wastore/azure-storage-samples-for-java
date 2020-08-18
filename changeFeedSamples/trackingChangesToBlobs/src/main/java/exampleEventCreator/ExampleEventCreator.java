@@ -42,7 +42,7 @@ public class ExampleEventCreator {
         
         // Create a Timer for creating events on a consistent interval
         Timer timer = new Timer();
-        TimerTask task = new ExampleEventCreatorHelper(storageAccount, sharedKeyCred, logger);
+        TimerTask task = new ExampleEventCreatorHelper(storageAccount, sharedKeyCred);
 
         // Running on schedule
         timer.scheduleAtFixedRate(task, 0, interval);
@@ -52,13 +52,12 @@ public class ExampleEventCreator {
 class ExampleEventCreatorHelper extends TimerTask {
     String storageAccount;
     String sharedKeyCred;
-    Logger logger;
+    private static Logger logger = LoggerFactory.getLogger(ExampleEventCreatorHelper.class);
     int blobCount = 0;
 
-    public ExampleEventCreatorHelper(String storageAccount, String sharedKeyCred, Logger logger) {
+    public ExampleEventCreatorHelper(String storageAccount, String sharedKeyCred) {
         this.storageAccount = storageAccount;
         this.sharedKeyCred = sharedKeyCred;
-        this.logger = logger;
     }
 
     // Creates a new blob every time timer is triggered with file name "#exampleBlob.txt" where # is an int.

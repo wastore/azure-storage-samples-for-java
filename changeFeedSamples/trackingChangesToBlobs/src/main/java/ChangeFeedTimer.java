@@ -23,7 +23,6 @@ import java.util.TimerTask;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import exampleEventCreator.ExampleEventCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,7 +69,7 @@ public class ChangeFeedTimer {
 
         // Create a Timer
         Timer timer = new Timer();
-        TimerTask task = new ChangeFeedHelper(blobServiceClient, blobContainerClient, blobClient, changefeedClient, cursor, logger);
+        TimerTask task = new ChangeFeedHelper(blobServiceClient, blobContainerClient, blobClient, changefeedClient, cursor);
 
         // Running on schedule
         timer.scheduleAtFixedRate(task, 0, interval);
@@ -96,7 +95,7 @@ class ChangeFeedHelper extends TimerTask {
     public BlobContainerClient containerClient;
     public BlobClient blobClient;
     public BlobChangefeedClient changefeedClient;
-    public Logger logger;
+    private static Logger logger = LoggerFactory.getLogger(ChangeFeedHelper.class);
 
     // Filtering
     String trackedContainer = "containers/test-changefeed-container";
@@ -107,18 +106,17 @@ class ChangeFeedHelper extends TimerTask {
     Predicate<BlobChangefeedEvent> checkEventType = (event) -> event.getEventType().toString().equals(eventType);
 
     public ChangeFeedHelper(BlobServiceClient blobServiceClient, BlobContainerClient containerClient,
-                            BlobClient blobClient, BlobChangefeedClient changefeedClient, Logger logger) {
-        this(blobServiceClient, containerClient, blobClient, changefeedClient, null, logger);
+                            BlobClient blobClient, BlobChangefeedClient changefeedClient) {
+        this(blobServiceClient, containerClient, blobClient, changefeedClient, null);
     }
 
     public ChangeFeedHelper(BlobServiceClient blobServiceClient, BlobContainerClient containerClient,
-                            BlobClient blobClient, BlobChangefeedClient changefeedClient, String cursor, Logger logger) {
+                            BlobClient blobClient, BlobChangefeedClient changefeedClient, String cursor) {
         this.serviceClient = blobServiceClient;
         this.containerClient = containerClient;
         this.blobClient = blobClient;
         this.changefeedClient = changefeedClient;
         this.cursor = cursor;
-        this.logger = logger;
     }
 
     /**
