@@ -27,8 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ChangeFeedTimer {
-    private static Logger logger = LoggerFactory.getLogger(ChangeFeedTimer.class);
-
     /**
      * Sets up a timer that checks for new events that are filtered based on preferences in TimerHelper. Saves cursor to
      * blob in given storage account for future use
@@ -137,7 +135,7 @@ class ChangeFeedHelper extends TimerTask {
 
         Stream<BlobChangefeedPagedResponse> pages = iterable.streamByPage();
 
-        this.logger.info("Printing all events satisfying filters");
+        logger.info("Printing all events satisfying filters");
 
         // Checking by page every event and seeing if it satisfies filters. At the end, store the cursor in a blob
         pages.forEach(page -> {
@@ -147,16 +145,16 @@ class ChangeFeedHelper extends TimerTask {
                                     checkBlobName.and(checkContainerName).test(event))
                             .forEach(event ->
                                     // TODO: Change output as needed to see necessary information from event
-                                    this.logger.info("Time: {}, Subject: {}, ID: {}, Type: {}",
+                                    logger.info("Time: {}, Subject: {}, ID: {}, Type: {}",
                                             event.getEventTime(), event.getSubject(), event.getId(), event.getEventType()));
                     this.cursor = page.getContinuationToken();
                 }
         );
 
-        this.logger.info("Printed all events satisfying filter since last check, storing cursor into storage account");
+        logger.info("Printed all events satisfying filter since last check, storing cursor into storage account");
         // Stores cursor in storage account, in case if it needs to be used again later
         this.storeCursor();
-        this.logger.info("Stored cursor");
+        logger.info("Stored cursor");
     }
 
     /**

@@ -20,8 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ExampleEventCreator {
-    private static Logger logger = LoggerFactory.getLogger(ExampleEventCreator.class);
-
     /**
      * Sets up example events to test changefeed with
      */
@@ -84,7 +82,7 @@ class ExampleEventCreatorHelper extends TimerTask {
         BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(this.blobCount + blobName).getBlockBlobClient();
         ByteArrayInputStream dataStream = new ByteArrayInputStream(blobData.getBytes());
         blockBlobClient.upload(dataStream, blobData.length(), true);
-        this.logger.info("Generated blob called " + this.blobCount + blobName);
+        logger.info("Generated blob called " + this.blobCount + blobName);
         this.blobCount++;
     }
 }
