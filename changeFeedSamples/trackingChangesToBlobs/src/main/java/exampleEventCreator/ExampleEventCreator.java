@@ -16,6 +16,9 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ExampleEventCreator {
     /**
      * Sets up example events to test changefeed with
@@ -47,6 +50,7 @@ public class ExampleEventCreator {
 class ExampleEventCreatorHelper extends TimerTask {
     String storageAccount;
     String sharedKeyCred;
+    private static Logger logger = LoggerFactory.getLogger(ExampleEventCreatorHelper.class);
     int blobCount = 0;
 
     public ExampleEventCreatorHelper(String storageAccount, String sharedKeyCred) {
@@ -78,7 +82,7 @@ class ExampleEventCreatorHelper extends TimerTask {
         BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(this.blobCount + blobName).getBlockBlobClient();
         ByteArrayInputStream dataStream = new ByteArrayInputStream(blobData.getBytes());
         blockBlobClient.upload(dataStream, blobData.length(), true);
-        System.out.println("Generated blob called " + this.blobCount + blobName);
+        logger.info("Generated blob called " + this.blobCount + blobName);
         this.blobCount++;
     }
 }
