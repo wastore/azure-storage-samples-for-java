@@ -23,6 +23,9 @@ import java.util.TimerTask;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ChangeFeedTimer {
     /**
      * Sets up a timer that checks for new events that are filtered based on preferences in TimerHelper. Saves cursor to
@@ -63,8 +66,9 @@ public class ChangeFeedTimer {
         String cursor = getCursor(blobContainerClient, blobClient);
 
         // Create a Timer
+        Logger logger = LoggerFactory.getLogger(ChangeFeedTimer.class);
         Timer timer = new Timer();
-        TimerTask task = new ChangeFeedHelper(blobServiceClient, blobContainerClient, blobClient, changefeedClient, cursor);
+        TimerTask task = new ChangeFeedHelper(blobServiceClient, blobContainerClient, blobClient, changefeedClient, cursor, logger);
 
         // Running on schedule
         timer.scheduleAtFixedRate(task, 0, interval);
@@ -90,6 +94,7 @@ class ChangeFeedHelper extends TimerTask {
     public BlobContainerClient containerClient;
     public BlobClient blobClient;
     public BlobChangefeedClient changefeedClient;
+    public Logger logger;
 
     // Filtering
     String trackedContainer = "containers/test-changefeed-container";
@@ -100,17 +105,18 @@ class ChangeFeedHelper extends TimerTask {
     Predicate<BlobChangefeedEvent> checkEventType = (event) -> event.getEventType().toString().equals(eventType);
 
     public ChangeFeedHelper(BlobServiceClient blobServiceClient, BlobContainerClient containerClient,
-                            BlobClient blobClient, BlobChangefeedClient changefeedClient) {
-        this(blobServiceClient, containerClient, blobClient, changefeedClient, null);
+                            BlobClient blobClient, BlobChangefeedClient changefeedClient, Logger logger) {
+        this(blobServiceClient, containerClient, blobClient, changefeedClient, null, logger);
     }
 
     public ChangeFeedHelper(BlobServiceClient blobServiceClient, BlobContainerClient containerClient,
-                            BlobClient blobClient, BlobChangefeedClient changefeedClient, String cursor) {
+                            BlobClient blobClient, BlobChangefeedClient changefeedClient, String cursor, Logger logger) {
         this.serviceClient = blobServiceClient;
         this.containerClient = containerClient;
         this.blobClient = blobClient;
         this.changefeedClient = changefeedClient;
         this.cursor = cursor;
+        this.logger = logger;
     }
 
     /**
@@ -131,7 +137,7 @@ class ChangeFeedHelper extends TimerTask {
 
         Stream<BlobChangefeedPagedResponse> pages = iterable.streamByPage();
 
-        System.out.println("Printing all events satisfying filters");
+        this.logger.info("Printing all events satisfying filters");
 
         // Checking by page every event and seeing if it satisfies filters. At the end, store the cursor in a blob
         pages.forEach(page -> {
@@ -141,16 +147,16 @@ class ChangeFeedHelper extends TimerTask {
                                     checkBlobName.and(checkContainerName).test(event))
                             .forEach(event ->
                                     // TODO: Change output as needed to see necessary information from event
-                                    System.out.printf("Time: %s, Subject: %s, ID: %s, Type: %s%n",
+                                    this.logger.info("Time: {}, Subject: {}, ID: {}, Type: {}",
                                             event.getEventTime(), event.getSubject(), event.getId(), event.getEventType()));
                     this.cursor = page.getContinuationToken();
                 }
         );
 
-        System.out.println("Printed all events satisfying filter since last check, storing cursor into storage account");
+        this.logger.info("Printed all events satisfying filter since last check, storing cursor into storage account");
         // Stores cursor in storage account, in case if it needs to be used again later
         this.storeCursor();
-        System.out.println("Stored cursor");
+        this.logger.info("Stored cursor");
     }
 
     /**

@@ -16,6 +16,9 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ExampleEventCreator {
     /**
      * Sets up example events to test changefeed with
@@ -36,8 +39,9 @@ public class ExampleEventCreator {
         int interval = Integer.parseInt(intervalString);
         
         // Create a Timer for creating events on a consistent interval
+        Logger logger = LoggerFactory.getLogger(ExampleEventCreator.class);
         Timer timer = new Timer();
-        TimerTask task = new ExampleEventCreatorHelper(storageAccount, sharedKeyCred);
+        TimerTask task = new ExampleEventCreatorHelper(storageAccount, sharedKeyCred, logger);
 
         // Running on schedule
         timer.scheduleAtFixedRate(task, 0, interval);
@@ -47,11 +51,13 @@ public class ExampleEventCreator {
 class ExampleEventCreatorHelper extends TimerTask {
     String storageAccount;
     String sharedKeyCred;
+    Logger logger;
     int blobCount = 0;
 
-    public ExampleEventCreatorHelper(String storageAccount, String sharedKeyCred) {
+    public ExampleEventCreatorHelper(String storageAccount, String sharedKeyCred, Logger logger) {
         this.storageAccount = storageAccount;
         this.sharedKeyCred = sharedKeyCred;
+        this.logger = logger;
     }
 
     // Creates a new blob every time timer is triggered with file name "#exampleBlob.txt" where # is an int.
@@ -78,7 +84,7 @@ class ExampleEventCreatorHelper extends TimerTask {
         BlockBlobClient blockBlobClient = blobContainerClient.getBlobClient(this.blobCount + blobName).getBlockBlobClient();
         ByteArrayInputStream dataStream = new ByteArrayInputStream(blobData.getBytes());
         blockBlobClient.upload(dataStream, blobData.length(), true);
-        System.out.println("Generated blob called " + this.blobCount + blobName);
+        this.logger.info("Generated blob called " + this.blobCount + blobName);
         this.blobCount++;
     }
 }
