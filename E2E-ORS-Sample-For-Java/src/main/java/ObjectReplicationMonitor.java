@@ -10,12 +10,15 @@ import com.azure.storage.blob.models.ObjectReplicationPolicy;
 import com.azure.storage.blob.models.ObjectReplicationRule;
 import com.azure.storage.blob.models.AccessTier;
 import com.azure.storage.blob.models.BlobStorageException;
+import com.azure.storage.blob.models.DeleteSnapshotsOptionType;
 
 import java.io.InputStream;
 import java.io.FileInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.*;
+import java.lang.String;
 import java.util.Properties;
 import java.util.ArrayList;
 import java.util.List;
@@ -53,6 +56,7 @@ public class ObjectReplicationMonitor {
         String destinationStorageAccountConnectionString = prop.getProperty("destinationStorageAccountConnectionString");
         String blobsToReplicatePrefix = prop.getProperty("blobsToReplicatePrefix");
         String archiveMethod = prop.getProperty("archiveMethod");
+        String deleteBlobs = prop.getProperty("deleteBlobs");
 
         // Creating a sample list of blobs to upload and replicate
         String[] replicatedBlobList = new String[103];
@@ -81,6 +85,11 @@ public class ObjectReplicationMonitor {
                     completedEventsList);
         } else {
             logger.info("\nNo archive method selected.");
+        }
+
+        // Call method to delete blobs with batch
+        if (deleteBlobs.equals("true")) {
+            deleteBlobsWithBatch(sourceStorageAccountConnectionString, sourceContainerName, replicatedBlobList);
         }
     }
 
@@ -286,5 +295,48 @@ public class ObjectReplicationMonitor {
         }
 
         logger.info("\nArchived replicated blobs!");
+    }
+
+    /**
+     * This method is to use batch to delete blobs from the source container that were uploaded in this sample
+     *
+     * @param sourceConnectionString The connection string of the source account.
+     * @param sourceContainer The name of the source container.
+     * @param blobList The list of blobs that were uploaded to the container
+     */
+    private static void deleteBlobsWithBatch(String sourceConnectionString, String sourceContainer,
+                                                       String[] blobList) {
+        logger.info("\nDeleting all blobs replicated in this sample...");
+
+        // Get blobServiceClient to create batch client
+        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder().connectionString(sourceConnectionString)
+                .buildClient();
+
+        // Create a batch client that can be used to archive multiple blobs
+        BlobBatchClient blobBatchClient = new BlobBatchClientBuilder(blobServiceClient).buildClient();
+
+        // Get all blobs in container's urls and add them to a list
+        List<String> blobUrls = new ArrayList<>();
+        for (String blobName : blobList) {
+            String url = blobServiceClient.getBlobContainerClient(sourceContainer).getBlobClient(blobName).getBlobUrl();
+            blobUrls.add(url);
+        }
+
+        // Attempt to bulk delete blobs with catch
+        try {
+            blobBatchClient.deleteBlobs(blobUrls, DeleteSnapshotsOptionType.INCLUDE).forEach(response ->
+                    logger.info(String.format("Deleting blob with URL %s completed with status code %d%n",
+                            response.getRequest().getUrl(), response.getStatusCode())));
+
+            logger.info("\nArchived replicated blobs!");
+        } catch (BlobBatchStorageException ex) {
+            logger.info("\nThis error may have to do with TLS. Please ensure that you are using 'http' in your " +
+                    "connection string rather than 'https', and that 'Secure Transfer' is disabled in your storage account. " +
+                    "See README.md for more help.");
+            for (BlobStorageException e : ex.getBatchExceptions()) {
+                String message = e.getServiceMessage();
+                logger.error(message);
+            }
+        }
     }
 }

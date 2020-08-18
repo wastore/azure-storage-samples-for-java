@@ -49,3 +49,10 @@ Currently, there are issues with using batch to archive. In order to navigate th
 ##### Archiving Blobs Individually
 If you do not want to use batch, the other option is to archive each blob individually. All that is required is to set
 archiveMethod in app.config to "individual".
+
+### Deleting Blobs and Cleanup
+In the file app.config, the variable deleteBlobs represents whether or not the user would like for all of the blobs that
+were uploaded in this sample to be deleted out of the containers that they were uploaded to. This will also delete blobs
+that were replicated to the destination container from the destination container. If you would like to use batch delete,
+set the deleteBlobs variable to true, if not set it to false. This requires the same setup as using batch to archive,
+which can be seen above.
