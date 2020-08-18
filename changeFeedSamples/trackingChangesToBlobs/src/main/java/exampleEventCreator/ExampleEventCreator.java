@@ -20,6 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ExampleEventCreator {
+    private static Logger logger = LoggerFactory.getLogger(ExampleEventCreator.class);
+
     /**
      * Sets up example events to test changefeed with
      */
@@ -39,7 +41,6 @@ public class ExampleEventCreator {
         int interval = Integer.parseInt(intervalString);
         
         // Create a Timer for creating events on a consistent interval
-        Logger logger = LoggerFactory.getLogger(ExampleEventCreator.class);
         Timer timer = new Timer();
         TimerTask task = new ExampleEventCreatorHelper(storageAccount, sharedKeyCred, logger);
 

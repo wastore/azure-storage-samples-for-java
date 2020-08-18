@@ -23,10 +23,13 @@ import java.util.TimerTask;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import exampleEventCreator.ExampleEventCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ChangeFeedTimer {
+    private static Logger logger = LoggerFactory.getLogger(ChangeFeedTimer.class);
+
     /**
      * Sets up a timer that checks for new events that are filtered based on preferences in TimerHelper. Saves cursor to
      * blob in given storage account for future use
@@ -66,7 +69,6 @@ public class ChangeFeedTimer {
         String cursor = getCursor(blobContainerClient, blobClient);
 
         // Create a Timer
-        Logger logger = LoggerFactory.getLogger(ChangeFeedTimer.class);
         Timer timer = new Timer();
         TimerTask task = new ChangeFeedHelper(blobServiceClient, blobContainerClient, blobClient, changefeedClient, cursor, logger);
 
