@@ -23,6 +23,9 @@ import java.util.TimerTask;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ChangeFeedTimer {
     /**
      * Sets up a timer that checks for new events that are filtered based on preferences in TimerHelper. Saves cursor to
@@ -90,6 +93,7 @@ class ChangeFeedHelper extends TimerTask {
     public BlobContainerClient containerClient;
     public BlobClient blobClient;
     public BlobChangefeedClient changefeedClient;
+    private static Logger logger = LoggerFactory.getLogger(ChangeFeedHelper.class);
 
     // Filtering
     String trackedContainer = "containers/test-changefeed-container";
@@ -131,7 +135,7 @@ class ChangeFeedHelper extends TimerTask {
 
         Stream<BlobChangefeedPagedResponse> pages = iterable.streamByPage();
 
-        System.out.println("Printing all events satisfying filters");
+        logger.info("Printing all events satisfying filters");
 
         // Checking by page every event and seeing if it satisfies filters. At the end, store the cursor in a blob
         pages.forEach(page -> {
@@ -141,16 +145,16 @@ class ChangeFeedHelper extends TimerTask {
                                     checkBlobName.and(checkContainerName).test(event))
                             .forEach(event ->
                                     // TODO: Change output as needed to see necessary information from event
-                                    System.out.printf("Time: %s, Subject: %s, ID: %s, Type: %s%n",
+                                    logger.info("Time: {}, Subject: {}, ID: {}, Type: {}",
                                             event.getEventTime(), event.getSubject(), event.getId(), event.getEventType()));
                     this.cursor = page.getContinuationToken();
                 }
         );
 
-        System.out.println("Printed all events satisfying filter since last check, storing cursor into storage account");
+        logger.info("Printed all events satisfying filter since last check, storing cursor into storage account");
         // Stores cursor in storage account, in case if it needs to be used again later
         this.storeCursor();
-        System.out.println("Stored cursor");
+        logger.info("Stored cursor");
     }
 
     /**
