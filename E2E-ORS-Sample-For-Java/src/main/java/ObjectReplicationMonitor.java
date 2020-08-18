@@ -31,7 +31,9 @@ import org.slf4j.LoggerFactory;
  *     before running this program and make sure all prerequisites are met.
  */
 public class ObjectReplicationMonitor {
+
     static Logger logger = LoggerFactory.getLogger(ObjectReplicationMonitor.class);
+
     public static void main(String[] args) throws IOException {
 
         // Get path to config file
@@ -136,7 +138,7 @@ public class ObjectReplicationMonitor {
         int completed = 0;
         int size = blobList.length;
         int percentage = 0;
-        int percentTracker = 0;
+        int percentTracker;
         ArrayList<String> completedEvents = new ArrayList<>();
         ArrayList<String> failedEvents = new ArrayList<>();
 
