@@ -1,8 +1,8 @@
-#README
-###Understanding this sample
+# README
+### Understanding this sample
 The purpose of this sample is to demonstrate what object replication does.
 
-###Getting started
+### Getting started
 Currently, creating object replication is unavailable in command line. If you have not yet set up object replication,
 please follow the instructions in the links below, using Azure portal when possible.
 
@@ -12,7 +12,7 @@ https://docs.microsoft.com/en-us/azure/storage/blobs/object-replication-overview
 To configure and create object replication:
 https://docs.microsoft.com/en-us/azure/storage/blobs/object-replication-configure?tabs=portal
 
-###Prerequisites
+### Prerequisites
 Object replication configured and set up (see links above for instructions)
 
 Azure account with an active subscription
@@ -23,7 +23,7 @@ Apache Maven
 
 Compatible IDE
 
-###To Use
+### To Use
 Follow the instructions in the links under "Getting Started" if you do not already have ORS set up
 
 Go Through the app.config file and make any necessary changes
@@ -35,10 +35,10 @@ successful replication. This will output a percentage status to track how many b
 Then one blob pair from the source and destination container's contents will be printed to ensure that the blobs 
 correctly replicated from the source container to the destination container.
 
-###Issues with Archiving
+### Issues with Archiving
 This program has two different implementations of archiving replicated blobs: using batch or archiving individually.
 To choose which implementation you would like to use, set archiveMethod in app.config to "batch" or "individual".
-#####Using Batch to Archive
+##### Using Batch to Archive
 Currently, there are issues with using batch to archive. In order to navigate these issues, follow these steps:
 1. Access the storage account that contains the blobs you want to archive
 2. Navigate to Configuration
@@ -46,6 +46,6 @@ Currently, there are issues with using batch to archive. In order to navigate th
 4. When adding this storage account's connection string to the config.app, change "https" to "http" in the connection string
 5. Set archiveMethod in app.config to "batch"
 [here is the reported issue](https://github.com/Azure/azure-sdk-for-net/issues/13524)
-#####Archiving Blobs Individually
+##### Archiving Blobs Individually
 If you do not want to use batch, the other option is to archive each blob individually. All that is required is to set
 archiveMethod in app.config to "individual".
