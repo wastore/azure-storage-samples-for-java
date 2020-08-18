@@ -53,7 +53,7 @@ public class ObjectReplicationMonitor {
         String archiveMethod = prop.getProperty("archiveMethod");
 
         // Creating a sample list of blobs to upload and replicate
-        String[] replicatedBlobList = new String[10];
+        String[] replicatedBlobList = new String[103];
         for (int i = 0; i < replicatedBlobList.length; i++) {
             replicatedBlobList[i] = blobsToReplicatePrefix + i;
         }
@@ -136,6 +136,7 @@ public class ObjectReplicationMonitor {
         int completed = 0;
         int size = blobList.length;
         int percentage = 0;
+        int percentTracker = 0;
         ArrayList<String> completedEvents = new ArrayList<>();
         ArrayList<String> failedEvents = new ArrayList<>();
 
@@ -164,9 +165,10 @@ public class ObjectReplicationMonitor {
                     }
                 }
                 // Check if status has a new percentage value, to avoid repeat printing the same status
-                if ((int) (((double) completed / (double) size) * 100) != percentage) {
+                percentTracker = (int) (((double) completed / (double) size) * 100);
+                if (percentTracker != percentage) {
                     // Update percentage and output completion status
-                    percentage = (int)(((double)completed/(double)size) * 100);
+                    percentage = percentTracker;
                     logger.info("\nReplication completion is at " + percentage + "%...\n" + completed + " out of "
                             + size + " blobs have successfully replicated...");
 
