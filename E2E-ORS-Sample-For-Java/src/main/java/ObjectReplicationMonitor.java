@@ -322,7 +322,7 @@ public class ObjectReplicationMonitor {
             blobUrls.add(url);
         }
 
-        // Attempt to bulk delete blobs with catch
+        // Attempt to bulk delete blobs with batch
         try {
             blobBatchClient.deleteBlobs(blobUrls, DeleteSnapshotsOptionType.INCLUDE).forEach(response ->
                     logger.info(String.format("Deleting blob with URL %s completed with status code %d%n",
