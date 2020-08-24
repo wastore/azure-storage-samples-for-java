@@ -9,7 +9,8 @@ can also be modified to only display necessary information.
 Requires installation of [Java](https://docs.microsoft.com/en-us/java/azure/jdk/?view=azure-java-stable) 
 (at least JDK 8) 
 and Maven. Must have an [Azure subscription](https://azure.microsoft.com/en-us/free/) and 
-[create a storage account](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-create?tabs=azure-portal).
+[create a storage account](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-create?tabs=azure-portal). Storage
+account has to have [Changefeed enabled](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-change-feed?tabs=azure-portal#enable-and-disable-the-change-feed).
 Sample is best run using IntelliJ.
 
 #### Code Sample Specific Setup
